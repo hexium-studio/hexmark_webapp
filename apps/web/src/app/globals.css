@@ -33,6 +33,7 @@ body {
   line-height: 1.5;
 }
 
+/* biome-ignore-start lint/complexity/noImportantStyles: reduced motion must override every other animation rule */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -43,3 +44,4 @@ body {
     scroll-behavior: auto !important;
   }
 }
+/* biome-ignore-end lint/complexity/noImportantStyles: reduced motion must override every other animation rule */
