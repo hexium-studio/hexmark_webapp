@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11 blocks dependency build scripts unless allowed here.
+# esbuild (used by tsup, tsx and drizzle-kit) installs its native binary.
+allowBuilds:
+  esbuild: true

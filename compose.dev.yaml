@@ -1,0 +1,51 @@
+# Development stack: builds both images from this repository.
+#   docker compose -f compose.dev.yaml up -d --build
+# The defaults below are for local development only.
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hexmark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hexmark-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-hexmark}
+    volumes:
+      # PostgreSQL 18+ images keep their data below /var/lib/postgresql.
+      - db-data:/var/lib/postgresql
+    # Reachable from this machine only, for running the server outside Docker.
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-hexmark}:${POSTGRES_PASSWORD:-hexmark-dev}@db:5432/${POSTGRES_DB:-hexmark}
+      PORT: 3001
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+    ports:
+      - "${SERVER_PORT:-3001}:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      PORT: 3000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      server:
+        condition: service_started
+
+volumes:
+  db-data:

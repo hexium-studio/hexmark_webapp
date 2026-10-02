@@ -28,3 +28,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Build caches
+.next/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
