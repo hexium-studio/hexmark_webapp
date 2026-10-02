@@ -20,8 +20,13 @@ of the same API.
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first –
-all commits must be signed off (Developer Certificate of Origin).
+Bug reports and ideas are welcome as issues. Pull requests are not accepted –
+see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Branches
+
+- `main` – stable. Only released versions, each tagged (`v0.1.0`, …).
+- `dev` – ongoing development. May be unstable at any time.
 
 ## Security
 

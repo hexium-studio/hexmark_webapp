@@ -1,68 +1,36 @@
 # Contributing to Hexmark
 
-Thanks for your interest in Hexmark! This document explains how to contribute.
+Hexmark is **open source, but not open contribution**. The code is freely
+available under the [Apache License 2.0](LICENSE), while development of this
+repository is done by the maintainer only.
 
-## Scope
+## Issues are welcome
 
-Hexmark is a **wiki only** – notes, links, search, revisions and the MCP
-interface for agents. Proposals for project boards, task management or other
-modules will be declined. If you are unsure whether an idea fits, open an
-issue and ask before you write code.
+You can help by opening an issue:
 
-## Licensing of contributions
+- **Bug reports** – describe the steps to reproduce, the expected and the
+  actual result, and the version or commit you used.
+- **Ideas and feature requests** – describe the problem you want to solve,
+  not only the solution you have in mind.
 
-Hexmark is licensed under the [Apache License 2.0](LICENSE). By contributing,
-you agree that your contribution is licensed under the same license
-("inbound = outbound", see section 5 of the license). There is no separate
-Contributor License Agreement.
+Every issue is read, but there is **no guarantee that a request will be
+implemented**. Hexmark deliberately stays small: it is a wiki for agents and
+humans – notes, links, search, revisions and the MCP interface. Requests that
+do not fit this scope (for example project boards, task management or other
+modules) will be closed.
 
-## Developer Certificate of Origin (DCO)
+For security issues, do not open a public issue – follow
+[SECURITY.md](SECURITY.md) instead.
 
-Every commit must be signed off. The sign-off certifies that you wrote the
-change or otherwise have the right to submit it under the project license,
-as described in the [Developer Certificate of Origin 1.1](https://developercertificate.org/):
+## Pull requests are not accepted
 
-> By making a contribution to this project, I certify that:
->
-> (a) The contribution was created in whole or in part by me and I have the
-> right to submit it under the open source license indicated in the file; or
->
-> (b) The contribution is based upon previous work that, to the best of my
-> knowledge, is covered under an appropriate open source license and I have
-> the right under that license to submit that work with modifications,
-> whether created in whole or in part by me, under the same open source
-> license (unless I am permitted to submit under a different license), as
-> indicated in the file; or
->
-> (c) The contribution was provided directly to me by some other person who
-> certified (a), (b) or (c) and I have not modified it.
->
-> (d) I understand and agree that this project and the contribution are
-> public and that a record of the contribution (including all personal
-> information I submit with it, including my sign-off) is maintained
-> indefinitely and may be redistributed consistent with this project or the
-> open source license(s) involved.
+Pull requests from outside the project will be closed without review. This
+keeps the scope, the code style and the authorship of the project in one hand.
+If you found a bug and know how to fix it, please describe the fix in an
+issue – that helps just as much.
 
-Add the sign-off with `git commit -s`. It appends a line like:
+## Forks
 
-```
-Signed-off-by: Your Name <you@example.com>
-```
-
-Pull requests with commits that are not signed off cannot be merged.
-
-## Pull requests
-
-- Keep changes focused – one topic per pull request.
-- Write code, identifiers, comments and commit messages in English.
-- Keep source files small and split by responsibility
-  (guideline: about 200 lines, never more than 250).
-- Do not commit secrets, tokens, real domains, IP addresses or personal data.
-  Use environment variables and neutral examples such as `example.com`.
-- User interface changes must meet WCAG 2.1 AA and respect the user's system
-  settings for colour scheme and reduced motion.
-
-## Reporting bugs
-
-Open an issue with steps to reproduce, the expected and the actual result.
-For security issues, follow [SECURITY.md](SECURITY.md) instead.
+The license allows you to fork Hexmark and develop it further in your own
+direction. Please give your fork its own name – see
+[TRADEMARK.md](TRADEMARK.md).
