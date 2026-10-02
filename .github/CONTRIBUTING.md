@@ -1,7 +1,7 @@
 # Contributing to Hexmark
 
 Hexmark is **open source, but not open contribution**. The code is freely
-available under the [Apache License 2.0](LICENSE), while development of this
+available under the [Apache License 2.0](../LICENSE), while development of this
 repository is done by the maintainer only.
 
 ## Issues are welcome
@@ -33,4 +33,4 @@ issue – that helps just as much.
 
 The license allows you to fork Hexmark and develop it further in your own
 direction. Please give your fork its own name – see
-[TRADEMARK.md](TRADEMARK.md).
+[TRADEMARK.md](../docs/TRADEMARK.md).

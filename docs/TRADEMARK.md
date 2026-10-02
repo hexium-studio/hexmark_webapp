@@ -1,6 +1,6 @@
 # Trademark Policy
 
-The Hexmark source code is open source under the [Apache License 2.0](LICENSE).
+The Hexmark source code is open source under the [Apache License 2.0](../LICENSE).
 The **name "Hexmark" and the Hexmark logo** are not. They identify the official
 project maintained by Hexium Studio, and section 6 of the Apache License
 explicitly grants no rights to use them.
