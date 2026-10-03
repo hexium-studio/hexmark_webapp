@@ -22,6 +22,20 @@
       "when": 1790971332648,
       "tag": "0002_open_locales",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791006359684,
+      "tag": "0003_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791023274007,
+      "tag": "0004_two_factor",
+      "breakpoints": true
     }
   ]
 }

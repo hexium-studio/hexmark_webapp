@@ -6,6 +6,9 @@ import * as schema from "./schema";
 
 export type Database = PostgresJsDatabase<typeof schema>;
 
+// The handle inside getDb().transaction(...).
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 let db: Database | undefined;
 
 // Created on first use. Migrations run in the background (src/db/migrate.ts);
