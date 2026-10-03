@@ -1,0 +1,14 @@
+# Weekly update pull requests for the GitHub Actions used in
+# .github/workflows (pinned to commit SHAs; Dependabot updates the SHA and the
+# version comment). npm dependencies are updated by hand for now.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
