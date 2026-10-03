@@ -16,6 +16,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch --frozen-lock
 COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --offline --frozen-lockfile --filter "@hexmark/web..."
+# Strict check of the built-in translations (apps/web/messages/<code>/); a broken
+# file stops the image build like it stops `pnpm build`.
+RUN node tools/check-translations.mjs
 RUN pnpm --filter @hexmark/web build
 # COPY cannot be conditional; an empty public/ keeps the runtime stage valid
 # until the app ships static files.
@@ -26,6 +29,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Custom translations, read once at start (docs/translations.md). The compose
+# files mount ./locales here read-only; without a mount the folder is empty.
+ENV HEXMARK_LOCALES_DIR=/app/locales/custom
 WORKDIR /app
 # Standalone output mirrors the monorepo layout (outputFileTracingRoot),
 # so the server lives in apps/web/ and static assets go next to it.
@@ -33,6 +39,7 @@ WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /repo/apps/web/public ./apps/web/public
+RUN mkdir -p /app/locales/custom
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

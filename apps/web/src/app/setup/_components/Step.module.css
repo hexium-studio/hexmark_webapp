@@ -1,0 +1,108 @@
+/* Shared layout of the wizard steps. */
+
+.step,
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+/* Step 1: the checks as one card, rows separated by dividers. */
+.checks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  list-style: none;
+}
+
+.checks > li {
+  padding: calc(var(--space-4) + var(--space-0-5)) 0;
+}
+
+.checks > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Step 3: display name and username, then e-mail across both columns, then
+   password and confirmation. One column in narrow windows or with large
+   text. */
+.fields {
+  container-type: inline-size;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4-5) var(--space-5);
+  align-items: start;
+}
+
+@container (min-width: 36rem) {
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* Step 3 leaves a little more room above the buttons. */
+.actionsSpaced {
+  padding-top: var(--space-2);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Explains the state next to a button (summary, missing fields). */
+.status {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Setup card (large tier, see PageShell.module.css): 28 px between blocks,
+   tighter check rows and field rows. In step 3 the submit note starts its
+   own row, 28 px below the buttons. */
+@container page-card (min-width: 0) {
+  .step,
+  .form {
+    gap: var(--space-5-5);
+  }
+
+  .checks {
+    padding: var(--space-0-5) var(--space-4-5);
+  }
+
+  .checks > li {
+    padding: var(--space-4) 0;
+  }
+
+  .fieldGrid {
+    row-gap: calc(var(--space-4) + var(--space-0-5));
+  }
+
+  .actionsSpaced {
+    row-gap: var(--space-5-5);
+    padding-top: 0;
+  }
+
+  .actionsSpaced > .note {
+    flex-basis: 100%;
+  }
+}

@@ -1,0 +1,118 @@
+/* Layout of the setup "Complete" page. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+/* The heading block (PageHeading) is 12 px spaced here, 10 px in the
+   wizard: the status line is taller than a step kicker. */
+.section > :first-child {
+  gap: var(--space-3);
+}
+
+/* Replaces the accent kicker of the wizard steps. */
+/* Sits in the kicker, itself a flex row: min-width 0 here and on the
+   text lets a long word break (German "Administratorkonto" at 320 px with
+   200 % text) instead of widening the page. */
+.success {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-2-5);
+  align-items: start;
+  color: var(--color-success);
+  font-size: var(--font-size-callout);
+}
+
+.successText {
+  min-width: 0;
+}
+
+/* Centred on the first line when the message wraps (15 px x 1.5). */
+.successIcon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+}
+
+/* Numbered instructions as one card; the numbers are drawn by CSS
+   counters, so screen readers still get a plain ordered list. */
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  list-style: none;
+  counter-reset: instruction;
+}
+
+/* Text runs with <code> inside: no grid on the item, which would turn every
+   inline element into its own grid cell. The number sits in the padding. */
+.list > li {
+  position: relative;
+  padding-block: calc(var(--space-4) + var(--space-0-5)) var(--space-4);
+  padding-inline: calc(1.75rem + var(--space-4)) 0;
+  line-height: 1.55;
+  counter-increment: instruction;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.list > li::before {
+  content: counter(instruction);
+  position: absolute;
+  top: var(--space-4);
+  inset-inline-start: 0;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--color-accent-text);
+  border-radius: 50%;
+  color: var(--color-accent-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Setup card (large tier, see PageShell.module.css): 28 px between blocks,
+   heading 26 px, status line 14 px, instructions 15 px in rows 14 px
+   apart. */
+@container page-card (min-width: 0) {
+  .section {
+    gap: var(--space-5-5);
+  }
+
+  .section > :first-child {
+    gap: var(--space-2-5);
+  }
+
+  .section > :first-child > h2 {
+    font-size: var(--font-size-card-title-long);
+  }
+
+  .success {
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+  }
+
+  .list {
+    padding: var(--space-1) var(--space-4-5);
+  }
+
+  .list > li {
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-3-5);
+    font-size: var(--font-size-callout);
+  }
+
+  .list > li::before {
+    top: var(--space-3-5);
+  }
+}

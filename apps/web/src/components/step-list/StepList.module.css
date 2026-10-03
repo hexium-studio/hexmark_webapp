@@ -1,0 +1,168 @@
+/* Items 12/16 padding, 16 gap, 32 px
+   markers, 16 px connectors between items. */
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  min-width: 0;
+  /* The border is drawn inside the 12/16 px padding. */
+  padding: calc(var(--space-3) - 1px) calc(var(--space-4) - 1px);
+  /* Transparent until current, so the current item does not change size. */
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+}
+
+/* Connector line between two items, centred under the markers. */
+.item + .item {
+  margin-top: var(--space-4);
+}
+
+.item + .item::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 1px);
+  inset-inline-start: calc(var(--space-4) - 1px + 1rem - 1px);
+  width: 2px;
+  height: var(--space-4);
+  background: var(--color-border-control);
+}
+
+.current {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.marker {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-border-control);
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.current .marker {
+  border-color: var(--color-button);
+  background: var(--color-button);
+  color: var(--color-on-button);
+}
+
+.done .marker {
+  border-color: transparent;
+  color: var(--color-success);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.text {
+  display: grid;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+/* min-width: 0 lets a long word break instead of widening the panel
+   (320 px with 200 % text). */
+.title,
+.state {
+  min-width: 0;
+}
+
+.title {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.current .title {
+  font-weight: 600;
+}
+
+.state {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.done .state {
+  color: var(--color-success);
+}
+
+.current .state {
+  color: var(--color-accent-text-strong);
+}
+
+.todo .state {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* Compact header of the page shell (narrow windows, large text): title and
+   state share a line, the connectors shrink. */
+@container page-shell (max-width: 63.99rem) {
+  .item {
+    gap: var(--space-3);
+    padding: calc(var(--space-1-5) - 1px) calc(var(--space-3) - 1px);
+  }
+
+  .item + .item {
+    margin-top: var(--space-2);
+  }
+
+  .item + .item::before {
+    inset-inline-start: calc(var(--space-3) - 1px + 1rem - 1px);
+    height: var(--space-2);
+  }
+
+  .text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    align-items: baseline;
+  }
+}
+
+/* Setup card (large tier, see PageShell.module.css): items 10/14 px padding,
+   14 px gap and connectors, 30 px markers, title 15 px, state 13 px. */
+@container page-card (min-width: 0) {
+  .item {
+    gap: var(--space-3-5);
+    padding: calc(var(--space-2-5) - 1px) calc(var(--space-3-5) - 1px);
+  }
+
+  .item + .item {
+    margin-top: var(--space-3-5);
+  }
+
+  .item + .item::before {
+    inset-inline-start: calc(var(--space-3-5) - 1px + 0.9375rem - 1px);
+    height: var(--space-3-5);
+  }
+
+  .marker {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+
+  .title {
+    font-size: var(--font-size-callout);
+  }
+
+  .state {
+    font-size: var(--font-size-xs);
+  }
+}

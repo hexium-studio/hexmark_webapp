@@ -1,0 +1,101 @@
+/* Colour tokens for both themes. Colours follow the system theme; no framework.
+   Light mode puts white cards on a #FAFAFA page; dark mode uses near-black
+   surfaces (#09090B page, #0E0E11 cards). Every text and
+   control colour is at least 10 % above the WCAG 2.1 AA minimum against the
+   surfaces it is really used on, hover, focus and tinted alerts included
+   (text >= 4.95:1, large text, controls and focus >= 3.3:1). The setup
+   side panel uses the info tint as its surface. Lowest pairs: light muted
+   on page 5.30, primary fill on info tint 3.32; dark accent on the panel
+   tint 5.47, control outline on the panel tint 3.62. Re-measure when a
+   background changes.
+   Brand petrol #0E9EB3 reaches only 3.2:1 on white, so light mode uses darker
+   steps of it: #097382 for text and the focus ring, #086470 for text on
+   tinted or grey surfaces, and #0C93A7 as button fill with dark text (the
+   only petrol that passes against #09090B and as a control on white).
+   Toasts (components/toast/) put the status colour (title, icon, border,
+   progress bar) and --color-text on the matching tint; see Toast.module.css
+   for the measured pairs. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --color-bg: #fafafa; /* page; cards sit on it in white */
+  /* Invisible 2x2 page pattern, one pixel off by one unit in the green
+     channel. Chrome draws a raster tile that is entirely one colour as a
+     solid-colour quad, and on colour-managed displays that comes out in a
+     different shade than rasterised tiles of the same CSS colour, so short
+     pages showed a horizontal band. The pattern keeps every page tile from
+     being uniform. Small cards and surfaces do not need it: their tiles
+     always contain borders or text. Keep both colours in step with --color-bg. */
+  --bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23fafafa'/%3E%3Crect width='1' height='1' fill='%23fafbfa'/%3E%3C/svg%3E");
+  /* Same trick for the setup side panel (--color-info-tint), which fills
+     the whole window height below its short content. */
+  --panel-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23ecf6f7'/%3E%3Crect width='1' height='1' fill='%23ecf7f7'/%3E%3C/svg%3E");
+  /* And for the surface of the setup card (large windows), whose content
+     column stays empty below short steps. White has no room above, so its
+     pixel is one unit lower in green. */
+  --surface-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23ffffff'/%3E%3Crect width='1' height='1' fill='%23fffeff'/%3E%3C/svg%3E");
+  --color-surface: #ffffff;
+  --color-border: #e4e4e7; /* decorative dividers only */
+  --color-border-control: #71717a; /* outlines that make a control recognisable */
+  --color-code-bg: #f4f4f5;
+
+  /* Text */
+  --color-text: #09090b;
+  --color-text-secondary: #52525b; /* leads, hints, details (may contain code chips) */
+  --color-text-muted: #68686f; /* short notes; on --color-code-bg only for disabled buttons (exempt) */
+
+  /* Accent */
+  --color-accent-text: #097382; /* links, labels, secondary buttons on page/card */
+  --color-accent-text-hover: #086470;
+  --color-accent-text-strong: #086470; /* accent text on tinted or grey surfaces */
+  --color-button: #0c93a7; /* primary fill, current step marker */
+  /* Light mode keeps the fill on hover (no lighter petrol passes with dark
+     text); the glow below is the hover feedback. */
+  --color-button-hover: #0c93a7;
+  --color-on-button: #09090b;
+  --color-focus: #097382;
+  --shadow-hover: 0 10px 28px -12px rgb(12 147 167 / 0.5);
+
+  /* Status: each colour is used as text, icon and border on its own tint
+     (alerts and toasts). */
+  --color-success: #166534;
+  --color-success-tint: #f0fdf4;
+  --color-warning: #92400e;
+  --color-warning-tint: #fffbeb;
+  --color-danger: #b91c1c;
+  --color-danger-tint: #fef2f2;
+  --color-info-tint: #ecf6f7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #09090b;
+    --bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%2309090b'/%3E%3Crect width='1' height='1' fill='%23090a0b'/%3E%3C/svg%3E");
+    --panel-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%230b1c1f'/%3E%3Crect width='1' height='1' fill='%230b1d1f'/%3E%3C/svg%3E");
+    --surface-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%230e0e11'/%3E%3Crect width='1' height='1' fill='%230e0f11'/%3E%3C/svg%3E");
+    --color-surface: #0e0e11;
+    --color-border: #27272a;
+    --color-border-control: #71717a;
+    --color-code-bg: #27272a;
+    --color-text: #fafafa;
+    --color-text-secondary: #a1a1aa;
+    --color-text-muted: #8b8b95;
+    --color-accent-text: #0e9eb3;
+    --color-accent-text-hover: #14b8cf;
+    --color-accent-text-strong: #0e9eb3;
+    --color-button: #0e9eb3;
+    --color-button-hover: #14b8cf;
+    --color-on-button: #09090b;
+    --color-focus: #0e9eb3;
+    --shadow-hover: 0 10px 28px -12px rgb(14 158 179 / 0.45);
+    --color-success: #4ade80;
+    --color-success-tint: #0c1a11;
+    --color-warning: #fbbf24;
+    --color-warning-tint: #1f1708;
+    --color-danger: #f87171;
+    --color-danger-tint: #1f0f10;
+    --color-info-tint: #0b1c1f;
+  }
+}

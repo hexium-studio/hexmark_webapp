@@ -1,47 +1,7 @@
-/* Minimal reset. Colours follow the system theme; no framework. */
-
-:root {
-  color-scheme: light dark;
-  --color-bg: #ffffff;
-  --color-text: #18181b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #09090b;
-    --color-text: #fafafa;
-  }
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
-}
-
-/* biome-ignore-start lint/complexity/noImportantStyles: reduced motion must override every other animation rule */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-/* biome-ignore-end lint/complexity/noImportantStyles: reduced motion must override every other animation rule */
+/* Global styles, imported once by the root layout. Split by responsibility:
+   colour tokens for both themes, theme-independent scale tokens (type,
+   spacing, radii, focus), then the reset and document-wide rules. Component
+   styles live in CSS Modules next to their components. */
+@import "./styles/colors.css";
+@import "./styles/scale.css";
+@import "./styles/base.css";

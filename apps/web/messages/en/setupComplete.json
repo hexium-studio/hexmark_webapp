@@ -1,0 +1,16 @@
+{
+  "metaTitle": "Setup complete – Hexmark",
+  "title": "Setup complete",
+  "lead": "The administrator account has been created.",
+  "created": "The administrator account has been created.",
+  "heading": "Last step: remove the setup token",
+  "intro": "Sign-in stays blocked while <code>SETUP_TOKEN</code> is set on the server. The token is only needed once.",
+  "serverDownTitle": "The server is not answering right now.",
+  "serverDownDetail": "If you are restarting it, reload this page once it is running again.",
+  "instructions": {
+    "removeToken": "Delete the <code>SETUP_TOKEN</code> line from the <code>.env</code> file, or leave it empty (<code>SETUP_TOKEN=</code>).",
+    "restart": "Restart the server so it reads the change. With Docker Compose, run <code>docker compose up -d</code>; a plain <code>docker compose restart</code> keeps the old value.",
+    "reload": "Reload this page. Once the token is gone, it takes you to Hexmark."
+  },
+  "reload": "Reload this page"
+}

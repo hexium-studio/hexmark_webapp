@@ -1,0 +1,105 @@
+/* Setup step 2: legend and hint on the
+   left, Show/Hide on the right; below them one frame per group of cells
+   (44 x 56 px cells, 1 px dividers, 8 px radius), a 28 px dash between
+   groups.
+   The wrapper is the size container for the layout. Container
+   queries in rem keep groups whole as long as one fits: all in one row,
+   two per row, or one per row. Cells never shrink below the touch target
+   size; only when not even one group fits (320 px with 200 % text) does a
+   group break into rows of two cells.
+   A fieldset is at least as wide as its content by default; min-width: 0
+   and the wrapper's inline-size containment let it follow its parent
+   instead.
+   This file places legend, hint, toggle, cells and error in the fieldset;
+   the cells themselves (frames, dividers, dashes) are in
+   CodeCells.module.css. */
+.root {
+  container: code-input / inline-size;
+}
+
+.fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-5);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A floated legend is a normal grid item instead of sitting in the
+   fieldset border; it still names the fieldset. */
+.legend {
+  float: inline-start;
+  grid-column: 1;
+  padding: 0;
+}
+
+.hint {
+  grid-column: 1;
+  margin-top: var(--space-1);
+}
+
+.toggle {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
+}
+
+/* Where the cells (CodeCells.module.css) sit in the fieldset grid. */
+.cellsArea,
+.error {
+  grid-column: 1 / -1;
+}
+
+.cellsArea {
+  margin-top: var(--space-4);
+}
+
+.error {
+  margin-top: var(--space-2);
+}
+
+/* Too narrow to keep the toggle beside legend and hint (320 px, large
+   text): it moves below the hint, so the hint keeps the full width. */
+@container code-input (max-width: 19.99rem) {
+  .fieldset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toggle {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: var(--space-2);
+  }
+}
+
+/* Setup card (large tier, see PageShell.module.css), step 2: legend and
+   hint across the full width, the Show/Hide toggle 24 px to the right of
+   the cells, aligned with their top. The toggle stays first in the DOM (and
+   so in tab order): showing the code before typing it is a sensible order
+   in every tier. */
+@container page-card (min-width: 0) {
+  .fieldset {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .legend,
+  .hint {
+    grid-column: 1 / -1;
+  }
+
+  .toggle {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+    justify-self: start;
+    margin-top: var(--space-4);
+  }
+
+  .cellsArea {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}

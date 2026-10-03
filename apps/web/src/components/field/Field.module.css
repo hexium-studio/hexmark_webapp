@@ -1,0 +1,117 @@
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1-5);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input {
+  /* Chrome composites the caret of a focused field. Anything painted after
+     the caret in the same stacking context (here the "Show" toggle and the
+     rest of the form) is then moved onto an extra "Overlap" layer, which shows
+     as a box in a different shade on colour-managed displays. Its own stacking
+     context puts the field, and so the caret, last in paint order. */
+  position: relative;
+  z-index: 1;
+  /* Lets the input shrink next to the toggle instead of overflowing. */
+  min-width: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: var(--control-min-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  transition: var(--transition-colors);
+}
+
+/* Focus ring as box-shadow, not outline: see --focus-ring-shadow in app/styles/scale.css. */
+.input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+.input[aria-invalid="true"]:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px var(--color-danger),
+    var(--focus-ring-shadow);
+}
+
+/* Forced colours drop box-shadows; the outline comes back there. */
+@media (forced-colors: active) {
+  .input:focus-visible {
+    outline: var(--focus-ring);
+  }
+}
+
+.toggle {
+  flex: none;
+  min-height: var(--control-min-size);
+  min-width: 4.5rem;
+  /* 16 px to the text including the 1 px border, as in the design. */
+  padding: var(--space-2) calc(var(--space-4) - 1px);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.toggle:hover {
+  background: var(--color-info-tint);
+  color: var(--color-accent-text-strong);
+}
+
+.error {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.errorIcon {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  margin-top: 0.25em;
+}
+
+/* Setup card (large tier, see PageShell.module.css): label and value 15 px,
+   hint 13 px. Errors keep 14 px. */
+@container page-card (min-width: 0) {
+  .label,
+  .input {
+    font-size: var(--font-size-callout);
+  }
+
+  .hint {
+    font-size: var(--font-size-xs);
+  }
+}

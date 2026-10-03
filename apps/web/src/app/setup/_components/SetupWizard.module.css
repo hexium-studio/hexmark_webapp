@@ -1,0 +1,13 @@
+/* Heading, step content and actions 32 px apart. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+/* 28 px in the setup card (large tier, see PageShell.module.css). */
+@container page-card (min-width: 0) {
+  .section {
+    gap: var(--space-5-5);
+  }
+}

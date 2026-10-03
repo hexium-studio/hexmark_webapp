@@ -1,0 +1,178 @@
+/* Three tiers, all in rem, so large text or zoom moves to a smaller tier
+   just like a smaller window:
+   - narrow: the panel is a compact header above the content;
+   - medium (designed at 1440 x 900): the split layout over the full
+     window: panel 440 px wide with 56/48 px padding, content padded 112/96 px;
+   - large (window at least 80 x 53 rem): the same split layout as one
+     card, see the end of this file.
+   Narrow and medium are container queries on the page width; large also
+   depends on the window height, which only a media query can see. */
+
+.shell {
+  container: page-shell / inline-size;
+  min-height: 100vh;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.panel {
+  /* Large uniform area: needs the invisible pattern like the page
+     background (see --bg-pattern in app/styles/colors.css). */
+  background-color: var(--color-info-tint);
+  background-image: var(--panel-pattern);
+  padding: var(--space-5) var(--space-4);
+}
+
+.wordmark {
+  margin: 0 0 var(--space-4);
+  color: var(--color-accent-text-strong);
+  font-size: var(--font-size-brand);
+  font-weight: 700;
+  letter-spacing: 0.014em;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.lead {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.progress {
+  margin-top: var(--space-5);
+}
+
+.tools {
+  margin-top: var(--space-4);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 50.5rem);
+  align-content: start;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-4) var(--space-7);
+}
+
+@container page-shell (min-width: 40rem) {
+  .panel {
+    padding: var(--space-6);
+  }
+
+  .content {
+    padding: var(--space-7) var(--space-6);
+  }
+}
+
+/* Split layout. The panel stretches to the full height of the window. */
+@container page-shell (min-width: 64rem) {
+  .layout {
+    grid-template-columns: 22rem minmax(0, 1fr);
+  }
+
+  /* A column, so the tools sit at the foot of the full-height panel. */
+  .panel {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-8) var(--space-7);
+  }
+
+  .tools {
+    margin-top: auto;
+    padding-top: var(--space-6);
+  }
+
+  .wordmark {
+    margin-bottom: var(--space-9);
+  }
+
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .progress {
+    margin-top: var(--space-7);
+  }
+
+  .content {
+    padding: var(--space-9) var(--space-7);
+  }
+}
+
+@container page-shell (min-width: 90rem) {
+  .layout {
+    grid-template-columns: 27.5rem minmax(0, 1fr);
+  }
+
+  .content {
+    padding: var(--space-11) var(--space-10) var(--space-10);
+  }
+}
+
+/* Large tier: the split layout as one card centred on the page
+   (1120 x 760 px, 1 px border outside, 16 px radius, panel
+   368 px with 48/40 px padding, content padded 56 px). The thresholds leave
+   at least 40 px of page around the 1122 x 762 px card. The card is never
+   shorter than 760 px, so all steps share one height, and grows with its
+   content (errors in step 3); the page scrolls then, nothing inside does.
+   The extra container name "page-card" exists only in this tier: components
+   adapt to the card with `@container page-card (min-width: 0)`, so the
+   thresholds are written down only here. */
+@media (min-width: 80rem) and (min-height: 53rem) {
+  .shell {
+    container-name: page-shell page-card;
+    display: grid;
+    place-items: center;
+    padding: var(--space-6-5) var(--space-6);
+  }
+
+  .layout {
+    grid-template-columns: 23rem minmax(0, 1fr);
+    width: calc(70rem + 2px);
+    min-height: calc(47.5rem + 2px);
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-xl) + 1px);
+    /* The content column is a large uniform area too (see --surface-pattern). */
+    background-color: var(--color-surface);
+    background-image: var(--surface-pattern);
+  }
+
+  /* Rounded itself instead of clipping the card, which keeps it free of
+     overflow handling. */
+  .panel {
+    padding: var(--space-7) var(--space-6-5);
+    border-start-start-radius: var(--radius-xl);
+    border-end-start-radius: var(--radius-xl);
+  }
+
+  .wordmark {
+    margin-bottom: var(--space-8);
+    font-size: var(--font-size-lg);
+  }
+
+  .title {
+    font-size: var(--font-size-card-title);
+  }
+
+  .lead {
+    margin-top: var(--space-2-5);
+    font-size: var(--font-size-callout);
+  }
+
+  .progress {
+    margin-top: var(--space-6-5);
+  }
+
+  .content {
+    padding: var(--space-8);
+  }
+}

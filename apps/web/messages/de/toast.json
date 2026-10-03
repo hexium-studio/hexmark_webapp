@@ -1,0 +1,11 @@
+{
+  "region": "Benachrichtigungen",
+  "dismiss": "Schließen",
+  "prefix": {
+    "success": "Erfolg:",
+    "info": "Hinweis:",
+    "warning": "Warnung:",
+    "error": "Fehler:"
+  },
+  "repeated": "{count}-mal angezeigt"
+}

@@ -1,0 +1,5 @@
+{
+  "pass": "Passed",
+  "fail": "Failed",
+  "unknown": "Not checked"
+}

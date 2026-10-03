@@ -1,4 +1,4 @@
 // Placeholder until the first real page is built.
 export default function HomePage() {
-  return <main>Hexmark</main>;
+  return <main id="main">Hexmark</main>;
 }

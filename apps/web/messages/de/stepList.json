@@ -1,0 +1,6 @@
+{
+  "stepPrefix": "Schritt {number}:",
+  "done": "Erledigt",
+  "current": "Aktueller Schritt",
+  "todo": "Noch offen"
+}
