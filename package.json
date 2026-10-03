@@ -8,15 +8,32 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm check:translations && pnpm -r build",
+    "typecheck": "pnpm -r typecheck && tsc -p tests",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "check:translations": "node tools/check-translations.mjs",
+    "test": "vitest run --config tests/vitest.config.ts",
+    "test:unit": "vitest run --config tests/vitest.config.ts --project unit",
+    "test:integration": "vitest run --config tests/vitest.config.ts --project integration",
+    "test:e2e": "pnpm build && playwright test --config tests/e2e/playwright.config.ts",
+    "test:all": "node tools/run-checks.mjs all",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
+    "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "^2.5.15",
+    "@hexmark/shared": "workspace:*",
+    "@node-rs/argon2": "^2.2.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.19.0",
-    "typescript": "^7.0.2"
+    "postgres": "^3.4.9",
+    "simple-git-hooks": "^2.14.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "simple-git-hooks": {
+    "pre-push": "node tools/run-checks.mjs pre-push"
   }
 }

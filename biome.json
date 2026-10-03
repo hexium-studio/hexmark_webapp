@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!pnpm-lock.yaml", "!**/.next", "!**/dist", "!**/next-env.d.ts"]
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!**/.next",
+      "!**/dist",
+      "!**/next-env.d.ts",
+      "!apps/server/drizzle/meta",
+      "!tests/unit/fixtures"
+    ]
   },
   "formatter": {
     "enabled": true,

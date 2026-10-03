@@ -6,3 +6,10 @@ packages:
 # esbuild (used by tsup, tsx and drizzle-kit) installs its native binary.
 allowBuilds:
   esbuild: true
+  # Pulled in by next-intl for its optional message extractor, which Hexmark
+  # does not use; both ship prebuilt binaries, so no build script is needed.
+  '@parcel/watcher': false
+  '@swc/core': false
+  # Installs git hooks from its postinstall script; Hexmark installs them
+  # with the root `prepare` script instead (tests/README.md).
+  simple-git-hooks: false

@@ -16,6 +16,9 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    // packages/shared files that tools/ loads with plain Node import each
+    // other with the .ts extension.
+    "allowImportingTsExtensions": true
   }
 }

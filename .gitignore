@@ -12,6 +12,11 @@ dist/
 build/
 coverage/
 
+# Custom UI translations of this installation (docs/translations.md); only
+# the folder's README is part of the repository.
+/locales/*
+!/locales/README.md
+
 # Local data
 data/
 *.sqlite
@@ -34,3 +39,6 @@ Thumbs.db
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
+
+# Test run output (tests/README.md)
+tests/.artifacts/
