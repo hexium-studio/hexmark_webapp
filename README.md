@@ -18,6 +18,11 @@ of the same API.
 - **Traceability** – every change is logged with actor, time and reason.
 - **Human control** – humans can lock notes against agent edits or hide them from agents.
 
+## Deployment
+
+Reverse proxies, HTTPS, the instance keys in `.env` and backups:
+[docs/deployment.md](docs/deployment.md).
+
 ## Contributing
 
 Bug reports and ideas are welcome as issues. Pull requests are not accepted –

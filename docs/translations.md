@@ -12,10 +12,15 @@ interface is translated.
 The interface language of a request is the first of:
 
 1. the signed-in user's saved language,
-2. the language picked in the visible language switch (stored in a cookie),
-3. the instance default (chosen in the first step of `/setup`),
-4. the browser's preferred languages (`Accept-Language`),
+2. the language stored in a cookie: picked in the first step of `/setup`, and
+   set to the account's language on every sign-in, so the sign-in page keeps
+   speaking it after signing out,
+3. the browser's preferred languages (`Accept-Language`),
+4. the instance default (chosen in the first step of `/setup`),
 5. English.
+
+The sign-in page has no language picker: before the first sign-in on a
+device it follows the browser.
 
 A browser asking for `de-DE` gets `de` when there is no `de-DE`; one asking
 for `de-CH` gets `de-CH` when that translation exists. A stored choice whose
