@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // Unit tests import pure modules of the web app through its alias.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["../apps/web/src/*"]
+    }
+  },
+  "include": ["**/*.ts"],
+  "exclude": [".artifacts", "unit/fixtures"]
+}
