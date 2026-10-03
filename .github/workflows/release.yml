@@ -18,7 +18,7 @@ concurrency:
 jobs:
   verify:
     name: verify tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       prerelease: ${{ steps.tag.outputs.prerelease }}
@@ -61,7 +61,7 @@ jobs:
   checks:
     name: checks (fast)
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out
@@ -203,7 +203,7 @@ jobs:
   manifest:
     name: manifest (${{ matrix.image }})
     needs: images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -305,7 +305,7 @@ jobs:
   release:
     name: GitHub release
     needs: [verify, manifest]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
