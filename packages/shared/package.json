@@ -15,6 +15,10 @@
     "./translation-files": {
       "types": "./src/translation-files.ts",
       "default": "./src/translation-files.ts"
+    },
+    "./internal-calls": {
+      "types": "./src/internal-calls.ts",
+      "default": "./src/internal-calls.ts"
     }
   },
   "scripts": {

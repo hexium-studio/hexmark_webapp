@@ -33,21 +33,33 @@ export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 // as params of too_short / too_long, so they are written down only here.
 const code = (value: FieldErrorCode) => value;
 
-const displayNameSchema = z
+// Length limits of the account fields. The setup form shows them as its
+// rules, so they are written down only here.
+export const ACCOUNT_LIMITS = {
+  displayName: { min: 1, max: 64 },
+  username: { min: 3, max: 32 },
+  password: { min: 12, max: 128 },
+} as const;
+
+// Every check of a field runs, so a failed parse lists all of its broken
+// rules (the setup form marks each rule on its own).
+export const displayNameSchema = z
   .string({ error: requiredOr("invalid_type") })
   .trim()
-  .min(1, code("required"))
-  .max(64, code("too_long"));
+  .min(ACCOUNT_LIMITS.displayName.min, code("required"))
+  .max(ACCOUNT_LIMITS.displayName.max, code("too_long"));
 
-const usernameSchema = z
+export const usernameSchema = z
   .string({ error: requiredOr("invalid_type") })
   .trim()
   .toLowerCase()
-  .min(3, code("too_short"))
-  .max(32, code("too_long"))
+  .min(ACCOUNT_LIMITS.username.min, code("too_short"))
+  .max(ACCOUNT_LIMITS.username.max, code("too_long"))
   .regex(USERNAME_PATTERN, code("invalid_format"));
 
-const emailSchema = z
+// E-mail as stored and compared: trimmed and lower-cased. Also the sign-in
+// e-mail (auth.ts).
+export const emailSchema = z
   .string({ error: requiredOr("invalid_type") })
   .trim()
   .toLowerCase()
@@ -56,10 +68,10 @@ const emailSchema = z
   .pipe(z.email(code("invalid_email")));
 
 // No composition rules on purpose: length is what makes a password strong.
-const passwordSchema = z
+export const passwordSchema = z
   .string({ error: requiredOr("invalid_type") })
-  .min(12, code("too_short"))
-  .max(128, code("too_long"));
+  .min(ACCOUNT_LIMITS.password.min, code("too_short"))
+  .max(ACCOUNT_LIMITS.password.max, code("too_long"));
 
 export const setupInputSchema = z
   .object({
@@ -94,6 +106,8 @@ export const setupStatusSchema = z.object({
   setupTokenPresent: z.boolean(),
   // SETUP_TOKEN is set and has the required format.
   setupTokenConfigured: z.boolean(),
+  // INTERNAL_API_KEY and ENCRYPTION_KEY are set and valid.
+  secretsConfigured: z.boolean(),
   database: z.object({
     reachable: z.boolean(),
     migrated: z.boolean(),
