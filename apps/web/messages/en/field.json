@@ -1,0 +1,6 @@
+{
+  "show": "Show",
+  "hide": "Hide",
+  "toggleSuffix": " {subject}",
+  "reveal": "Show {subject}"
+}

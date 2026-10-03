@@ -1,0 +1,66 @@
+/* Hover and pending only change colours, never size or position. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-size);
+  min-width: var(--control-min-size);
+  padding: var(--space-2) var(--space-5);
+  border: 2px solid;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+/* Hover rules set the text colour again: on ButtonLink the global a:hover
+   would otherwise win and put link petrol on the petrol fill. */
+.primary {
+  border-color: var(--color-button);
+  background: var(--color-button);
+  color: var(--color-on-button);
+}
+
+.primary:hover {
+  border-color: var(--color-button-hover);
+  background: var(--color-button-hover);
+  color: var(--color-on-button);
+  box-shadow: var(--shadow-hover);
+}
+
+.secondary {
+  border-color: var(--color-accent-text);
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
+/* On the tint the darker petrol step keeps text above 4.95:1. */
+.secondary:hover {
+  border-color: var(--color-accent-text-strong);
+  background: var(--color-info-tint);
+  color: var(--color-accent-text-strong);
+}
+
+/* Native `disabled` (nothing to submit yet): a muted fill without an
+   outline, so it reads as a button that is off, not as an empty field. The
+   caller explains why it is disabled (as a note next to it, or read with the
+   button through aria-describedby). Listed after the hover rules and more
+   specific, so hovering a disabled button changes nothing. */
+.button:disabled,
+.button:disabled:hover {
+  border-color: var(--color-button-disabled);
+  background: var(--color-button-disabled);
+  color: var(--color-on-button-disabled);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.button[data-pending] {
+  cursor: progress;
+}
+
+a.button {
+  text-decoration: none;
+}

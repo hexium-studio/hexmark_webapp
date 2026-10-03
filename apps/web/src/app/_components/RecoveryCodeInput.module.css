@@ -1,0 +1,25 @@
+/* Three groups of four in one row (RecoveryCodeInput.tsx): each group a
+   field of its own, framed like the text fields, a dash between them. The
+   groups share the width and may shrink to fit (320 px windows, large
+   text); four monospace characters still fit then. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.group {
+  min-height: 3.5rem;
+  padding-inline: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.dash {
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+}

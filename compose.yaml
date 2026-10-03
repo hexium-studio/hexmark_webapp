@@ -1,0 +1,78 @@
+# Hexmark: web UI, server (HTTP API + MCP) and PostgreSQL.
+# Copy .env.example to .env, set POSTGRES_PASSWORD, then run:
+#   docker compose up -d
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hexmark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hexmark}
+    volumes:
+      # PostgreSQL 18+ images keep their data below /var/lib/postgresql.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    image: ghcr.io/hexium-studio/hexmark-server:${HEXMARK_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hexmark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hexmark}
+      DB_HOST: db
+      DB_PORT: 5432
+      PORT: 3001
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      # Optional session lifetimes; empty means the default (see .env.example).
+      SESSION_ROTATION: ${SESSION_ROTATION:-}
+      SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-}
+      SESSION_MAX_AGE: ${SESSION_MAX_AGE:-}
+      # Instance keys (see .env.example). Back ENCRYPTION_KEY up together
+      # with the database: without it, encrypted data cannot be read.
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      # Optional, decrypt only: the key ENCRYPTION_KEY replaced.
+      ENCRYPTION_KEY_PREVIOUS: ${ENCRYPTION_KEY_PREVIOUS:-}
+      # Optional: the address users open Hexmark at (https://, or
+      # http://localhost). Without it, security keys and passkeys are not
+      # offered; authenticator apps work regardless (see .env.example).
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+    ports:
+      - "${SERVER_PORT:-3001}:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/hexium-studio/hexmark-web:${HEXMARK_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      # Server-to-server URL of the API (setup wizard, later all API calls).
+      SERVER_INTERNAL_URL: http://server:3001
+      # Reverse proxies whose forwarding headers are believed; empty means
+      # none (docs/deployment.md).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
+      # Same value as the server's: lets the server trust the browser
+      # addresses this container forwards.
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      # Optional custom UI translations, read at start (docs/translations.md).
+      # Docker creates an empty ./locales if it does not exist.
+      - ./locales:/app/locales/custom:ro
+    depends_on:
+      server:
+        condition: service_started
+
+volumes:
+  db-data:

@@ -1,0 +1,11 @@
+/* Warning sign in the status line, centred on its first line (13 px x 1.5). */
+.icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+}
+
+.reload {
+  width: 100%;
+}

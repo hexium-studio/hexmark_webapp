@@ -1,0 +1,11 @@
+{
+  "region": "Notifications",
+  "dismiss": "Dismiss",
+  "prefix": {
+    "success": "Success:",
+    "info": "Info:",
+    "warning": "Warning:",
+    "error": "Error:"
+  },
+  "repeated": "Shown {count} times"
+}

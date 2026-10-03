@@ -1,0 +1,151 @@
+/* The cells of the code input (see CodeInput.module.css for the layout
+   around them): one frame per group, 44 x 56 px cells with 1 px dividers,
+   8 px radius, a 28 px dash between groups. Container queries on the
+   wrapper (container "code-input") keep groups whole as long as one fits:
+   all in one row, two per row, or one per row; only when not even one
+   group fits does a group break into rows of two cells. */
+.groups {
+  display: grid;
+  justify-content: start;
+  row-gap: var(--space-3);
+}
+
+.separator {
+  display: none;
+  place-items: center;
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.group {
+  display: grid;
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.groups[data-invalid] .group {
+  border-color: var(--color-danger);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+/* Every input keeps the full 44 px touch width; a divider adds its pixel
+   to the cell it belongs to. */
+.cell {
+  display: grid;
+  width: 2.75rem;
+  min-height: 3.5rem;
+}
+
+/* Dividers are decorative: the frame around the group already shows the
+   control. */
+.cell + .cell {
+  width: calc(2.75rem + 1px);
+  border-inline-start: 1px solid var(--color-border);
+}
+
+/* The asterisk of a masked cell sits under the transparent input in the
+   same grid area. Painted before the input, it cannot overlap the caret's
+   compositing layer (see .input). */
+.glyph,
+.input {
+  grid-area: 1 / 1;
+}
+
+.glyph {
+  place-self: center;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.input {
+  /* Own stacking context: the caret, which Chrome composites, is painted
+     last (same reason as in Field.module.css). */
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  text-align: center;
+  transition: var(--transition-colors);
+}
+
+/* The caret would cross the asterisk; the focus ring shows the cell. */
+.input[data-glyph] {
+  caret-color: transparent;
+}
+
+/* Focus ring as box-shadow, not outline (see --focus-ring-shadow in
+   app/styles/scale.css), drawn inwards because the cells touch each other. */
+.input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset-shadow);
+}
+
+/* Forced colours drop box-shadows; the outline comes back there. */
+@media (forced-colors: active) {
+  .input:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+/* Two groups per row: group, dash, group. */
+@container code-input (min-width: 24.5rem) {
+  .groups {
+    grid-template-columns: auto auto auto;
+  }
+
+  .separator {
+    display: grid;
+    width: 1.75rem;
+  }
+
+  .separator.pairStart {
+    display: none;
+  }
+}
+
+/* All groups in one row. The dashes may give up a few pixels so the row
+   never overflows near the threshold. */
+@container code-input (min-width: 50rem) {
+  .groups {
+    display: flex;
+  }
+
+  .separator,
+  .separator.pairStart {
+    display: grid;
+    flex: 0 1 1.75rem;
+    min-width: 0.75rem;
+  }
+}
+
+/* Not even one group fits: two cells per row inside each frame. */
+@container code-input (max-width: 11.49rem) {
+  .group {
+    grid-template-columns: repeat(2, max-content);
+    grid-auto-flow: row;
+  }
+
+  .cell:nth-child(odd) {
+    width: 2.75rem;
+    border-inline-start: 0;
+  }
+
+  .cell:nth-child(n + 3) {
+    min-height: calc(3.5rem + 1px);
+    border-top: 1px solid var(--color-border);
+  }
+}

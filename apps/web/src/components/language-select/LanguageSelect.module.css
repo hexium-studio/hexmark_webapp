@@ -1,0 +1,33 @@
+/* Framed like the text inputs (components/field/Field.module.css). The
+   native arrow stays; color-scheme in app/styles/colors.css matches it to the theme. */
+.select {
+  /* A select is as wide as its longest option unless allowed to shrink. */
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--control-min-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.select:hover {
+  border-color: var(--color-accent-text);
+}
+
+/* Focus ring as box-shadow, not outline: see --focus-ring-shadow in app/styles/scale.css. */
+.select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* Forced colours drop box-shadows; the outline comes back there. */
+@media (forced-colors: active) {
+  .select:focus-visible {
+    outline: var(--focus-ring);
+  }
+}

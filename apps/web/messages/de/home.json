@@ -1,0 +1,21 @@
+{
+  "metaTitle": "Hexmark",
+  "greeting": "Hallo {name}",
+  "role": "Rolle: <strong>{role}</strong>",
+  "signOut": "Abmelden",
+  "signingOut": "Abmeldung läuft …",
+  "signedOut": {
+    "title": "Abgemeldet",
+    "message": "Die Abmeldung war erfolgreich."
+  },
+  "signedOutLocally": {
+    "title": "Auf diesem Gerät abgemeldet",
+    "message": "Der Server hat die Abmeldung nicht bestätigt. Die Sitzung endet nach ihrer Zeitbegrenzung von selbst."
+  },
+  "securityLink": "Sicherheitseinstellungen",
+  "twoFactorMissing": {
+    "title": "Zwei-Faktor-Authentifizierung ist nicht eingerichtet",
+    "detail": "Das Konto mit einer Authenticator-App oder einem Sicherheitsschlüssel schützen.",
+    "link": "Zwei-Faktor-Authentifizierung einrichten"
+  }
+}

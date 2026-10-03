@@ -1,0 +1,7 @@
+/* Global styles, imported once by the root layout. Split by responsibility:
+   colour tokens for both themes, theme-independent scale tokens (type,
+   spacing, radii, focus), then the reset and document-wide rules. Component
+   styles live in CSS Modules next to their components. */
+@import "./styles/colors.css";
+@import "./styles/scale.css";
+@import "./styles/base.css";

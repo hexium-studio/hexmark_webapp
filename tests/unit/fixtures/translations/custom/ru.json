@@ -1,0 +1,12 @@
+{
+  "_meta": { "name": "Русский", "dir": "ltr" },
+  "common": {
+    "skipLink": "Перейти к содержимому",
+    "back": "Назад",
+    "continue": "Далее",
+    "unknownKey": "Лишний"
+  },
+  "setup": {
+    "stepCounter": "Шаг {current}"
+  }
+}

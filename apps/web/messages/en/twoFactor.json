@@ -1,0 +1,154 @@
+{
+  "totp": {
+    "qrLabel": "QR code for setting up the authenticator app",
+    "loading": "Preparing the set-up…",
+    "scan": "Scan the QR code with your authenticator app, for example on your phone.",
+    "manual": "Can’t scan it? Enter this key in the app instead:",
+    "copyKey": "Copy key",
+    "keyCopied": "Key copied",
+    "codeLegend": "Code from the app",
+    "codeHint": "Enter the {length}-digit code the app now shows.",
+    "confirm": "Confirm",
+    "confirming": "Confirming…",
+    "progress": "Enter all {length} digits ({entered} of {length} entered).",
+    "cancel": "Cancel"
+  },
+  "key": {
+    "nameLabel": "Name of the security key",
+    "nameHint": "Helps you tell your keys apart, e.g. “YubiKey on my keyring”. Up to {max} characters.",
+    "register": "Register security key",
+    "registering": "Waiting for the security key…",
+    "nameMissing": "Enter a name for the security key first.",
+    "unavailable": {
+      "server": "Security keys are not enabled on this Hexmark installation. The authenticator app works regardless.",
+      "browser": "This browser cannot use security keys on this page: they need a secure connection (https://) and a browser that supports them."
+    }
+  },
+  "recovery": {
+    "onceTitle": "Save these codes now.",
+    "onceDetail": "Each one signs you in once if you cannot use your second factor. They are shown only this time.",
+    "copyAll": "Copy all",
+    "copied": "Recovery codes copied",
+    "download": "Download as file",
+    "savedConfirm": "I have saved my recovery codes",
+    "savedFirst": "Confirm first that you have saved the recovery codes.",
+    "file": {
+      "title": "Hexmark recovery codes",
+      "account": "Account: {account}",
+      "created": "Created: {date}",
+      "singleUse": "Each code works once, in place of your second factor.",
+      "keepSafe": "Keep them somewhere safe, apart from your password."
+    }
+  },
+  "copy": {
+    "failedTitle": "Could not copy",
+    "failedDetail": "The browser did not allow it here. Select the text and copy it by hand."
+  },
+  "errors": {
+    "attemptsLeft": "{count, plural, one {# more attempt} other {# more attempts}} before you have to sign in again.",
+    "attempts_exhausted": {
+      "title": "Too many wrong answers",
+      "detail": "For your security this sign-in was ended. Sign in again."
+    },
+    "challenge_invalid": {
+      "title": "Time is up",
+      "detail": "This step is no longer valid. Start again."
+    },
+    "invalid_code": {
+      "title": "Code not correct",
+      "detail": "Check the code and try again."
+    },
+    "webauthn_failed": {
+      "title": "Security key not accepted",
+      "detail": "The key’s answer could not be verified. Try again, or use another key."
+    },
+    "webauthn_registration_failed": {
+      "title": "Security key not registered",
+      "detail": "The key’s answer could not be verified, or took too long. Try again."
+    },
+    "webauthn_unavailable": {
+      "title": "Security keys not available",
+      "detail": "This Hexmark installation does not offer security keys."
+    },
+    "webauthn_cancelled": {
+      "title": "Cancelled",
+      "detail": "The security key did not answer: it was cancelled, timed out, or no matching key was used."
+    },
+    "webauthn_browser_failed": {
+      "title": "Security key did not work",
+      "detail": "The browser reported a problem with the key. Try again, or use another way."
+    },
+    "method_unavailable": {
+      "title": "Not set up for this account",
+      "detail": "This way of confirming is not set up for your account. Choose another one."
+    },
+    "unauthenticated": {
+      "title": "Signed out",
+      "detail": "Your session has ended. Sign in again."
+    },
+    "reauthentication_required": {
+      "title": "Password needed",
+      "detail": "Confirm your password to continue."
+    },
+    "invalid_password": {
+      "title": "Password not correct",
+      "detail": "Check your password and try again."
+    },
+    "totp_already_enabled": {
+      "title": "Already set up",
+      "detail": "An authenticator app is already set up for this account."
+    },
+    "totp_not_pending": {
+      "title": "Set-up expired",
+      "detail": "Start setting up the authenticator app again."
+    },
+    "totp_not_enabled": {
+      "title": "No authenticator app",
+      "detail": "No authenticator app is set up for this account."
+    },
+    "credential_not_found": {
+      "title": "Security key not found",
+      "detail": "It may have been removed already. The list has been updated."
+    },
+    "credential_exists": {
+      "title": "Already registered",
+      "detail": "This security key is already registered for your account."
+    },
+    "last_factor_required": {
+      "title": "Last second factor",
+      "detail": "Two-factor authentication is required on this installation. Add another factor before removing this one."
+    },
+    "second_factor_missing": {
+      "title": "No second factor yet",
+      "detail": "Set up an authenticator app or a security key first."
+    },
+    "rate_limited": {
+      "title": "Too many attempts",
+      "detail": "Wait a few minutes, then try again."
+    },
+    "validation": {
+      "title": "Input not accepted",
+      "detail": "Check what you entered and try again."
+    },
+    "setup_token_present": {
+      "title": "Sign-in blocked",
+      "detail": "The setup token is still set on the server. Reload the page."
+    },
+    "server_not_configured": {
+      "title": "Server configuration incomplete",
+      "detail": "A required key is missing or invalid on the server. Check the server log."
+    },
+    "database_unavailable": {
+      "title": "Database not available",
+      "detail": "Try again in a moment. If it keeps happening, check the server log."
+    },
+    "server_unreachable": {
+      "title": "Server not reachable",
+      "detail": "Make sure the Hexmark server is running, then try again."
+    },
+    "unexpected": {
+      "title": "Something went wrong on the server",
+      "detail": "Try again. If it keeps happening, check the server log."
+    }
+  }
+}

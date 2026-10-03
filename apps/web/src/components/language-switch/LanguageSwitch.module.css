@@ -1,0 +1,125 @@
+/* Sits on the tinted side panel: text colours are the steps that keep
+   4.95:1 on --color-info-tint (see app/styles/colors.css). */
+.root {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A legend sits in the fieldset border unless it floats; floating puts it
+   on the line of the buttons, which wrap below it when space runs out. */
+.label {
+  float: inline-start;
+  display: flex;
+  align-items: center;
+  min-height: var(--control-min-size);
+  margin-inline-end: var(--space-3);
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Colour-only hover; the touch target is 44 px high like every control. */
+.option {
+  min-height: var(--control-min-size);
+  min-width: var(--control-min-size);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-text-strong);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.option:hover {
+  border-color: var(--color-border-control);
+  background: var(--color-surface);
+}
+
+/* The active language: bold and underlined, not only another colour. */
+.option[aria-pressed="true"] {
+  color: var(--color-text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+  cursor: default;
+}
+
+.option[aria-pressed="true"]:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.option[data-pending] {
+  cursor: progress;
+}
+
+/* Compact form for long lists: label, then select and "Apply" in one row
+   that wraps (the button drops below) when the panel is narrow. */
+.compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.compact .label {
+  float: none;
+  margin-inline-end: 0;
+}
+
+.compactRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* May shrink below its longest option instead of widening the panel. */
+.select {
+  flex: 1 1 10rem;
+  font-size: var(--font-size-sm);
+}
+
+/* Framed (unlike the toggle buttons) so it reads as a button next to the
+   select; hover changes colours only. */
+.apply {
+  flex: none;
+  min-height: var(--control-min-size);
+  min-width: var(--control-min-size);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent-text-strong);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.apply:hover {
+  border-color: var(--color-accent-text-strong);
+  background: var(--color-info-tint);
+}
+
+.apply[data-pending] {
+  cursor: progress;
+}

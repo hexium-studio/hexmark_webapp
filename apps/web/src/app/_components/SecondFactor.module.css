@@ -1,0 +1,95 @@
+/* The steps after the password (SecondFactorStep, RecoveryCodeStep,
+   EnrolmentStep): blocks 20 px apart, full-width buttons like "Sign in",
+   text links for the ways out. */
+.step,
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4-5);
+}
+
+.wide {
+  width: 100%;
+  min-height: 3rem;
+}
+
+/* "or" between two lines. */
+.divider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  border-top: 1px solid var(--color-border);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
+/* A button that reads as a link: underlined accent text, 44 px high. */
+.link {
+  min-height: var(--control-min-size);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: 500;
+  text-align: start;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.link:hover {
+  color: var(--color-accent-text-hover);
+}
+
+/* Two choices at forced enrolment, stacked full width. */
+.choices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.subheading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+/* The recovery code's fieldset: legend, hint, then the groups. */
+.fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset > legend {
+  float: inline-start;
+  padding: 0;
+}
+
+.hint {
+  margin-bottom: var(--space-3);
+}

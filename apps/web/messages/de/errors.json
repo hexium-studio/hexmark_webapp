@@ -1,0 +1,49 @@
+{
+  "required": "Dieses Feld ist erforderlich.",
+  "invalid_type": "Dieser Wert ist ungültig.",
+  "too_short": "Mindestens {min} Zeichen verwenden.",
+  "too_long": "Höchstens {max} Zeichen verwenden.",
+  "invalid_format": "Dieser Wert hat nicht das erforderliche Format.",
+  "invalid_email": "Eine gültige E‑Mail-Adresse eingeben.",
+  "invalid_option": "Eine der angebotenen Optionen wählen.",
+  "mismatch": "Die Werte stimmen nicht überein.",
+  "taken": "Dieser Wert wird bereits verwendet.",
+  "invalid_body": "Die Formularfelder als JSON-Objekt senden.",
+  "invalid": "Dieser Wert ist ungültig.",
+  "fields": {
+    "displayName": {
+      "required": "Anzeigenamen eingeben."
+    },
+    "username": {
+      "required": "Benutzernamen eingeben.",
+      "invalid_format": "Nur Buchstaben, Ziffern, „_“ und „-“ verwenden, am Anfang ein Buchstabe oder eine Ziffer.",
+      "taken": "Dieser Benutzername ist bereits vergeben."
+    },
+    "email": {
+      "required": "E‑Mail-Adresse eingeben.",
+      "taken": "Diese E‑Mail-Adresse wird bereits verwendet."
+    },
+    "password": {
+      "required": "Passwort eingeben."
+    },
+    "passwordConfirm": {
+      "required": "Passwort bestätigen.",
+      "mismatch": "Die Passwörter stimmen nicht überein."
+    },
+    "setupToken": {
+      "required": "Setup-Token eingeben.",
+      "invalid_format": "Das Setup-Token hat {length} Zeichen: Buchstaben A–Z und Ziffern 0–9."
+    },
+    "locale": {
+      "required": "Eine Sprache wählen.",
+      "invalid_option": "Eine der angebotenen Sprachen wählen."
+    },
+    "keyName": {
+      "required": "Einen Namen für den Sicherheitsschlüssel eingeben."
+    },
+    "timezone": {
+      "required": "Eine Zeitzone wählen.",
+      "invalid_option": "Eine der angebotenen Zeitzonen wählen."
+    }
+  }
+}

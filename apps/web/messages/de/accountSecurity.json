@@ -1,0 +1,83 @@
+{
+  "metaTitle": "Sicherheit – Hexmark",
+  "title": "Sicherheit",
+  "lead": "Zwei-Faktor-Authentifizierung für {name}.",
+  "home": "Zurück zur Startseite",
+  "required": "Zwei-Faktor-Authentifizierung ist in dieser Hexmark-Installation Pflicht.",
+  "lastFactor": "Das ist der letzte zweite Faktor des Kontos, und diese Installation verlangt einen. Zuerst einen weiteren Faktor hinzufügen, dann diesen entfernen.",
+  "unavailable": {
+    "title": "Der Server antwortet gerade nicht.",
+    "detail": "Die Sicherheitseinstellungen lassen sich nicht anzeigen. Die Seite gleich neu laden."
+  },
+  "app": {
+    "title": "Authenticator-App",
+    "enabled": "An",
+    "disabled": "Aus",
+    "descriptionOn": "Codes aus der Authenticator-App bestätigen die Anmeldung.",
+    "descriptionOff": "Eine App auf Handy oder Computer, die alle 30 Sekunden einen neuen 6-stelligen Code anzeigt.",
+    "setUp": "Authenticator-App einrichten",
+    "remove": "Authenticator-App entfernen",
+    "added": "Authenticator-App hinzugefügt"
+  },
+  "keys": {
+    "title": "Sicherheitsschlüssel",
+    "count": "{count, plural, one {# Schlüssel} other {# Schlüssel}}",
+    "noneShort": "Keine",
+    "none": "Noch kein Sicherheitsschlüssel hinzugefügt. Ein Hardware-Schlüssel wie ein YubiKey oder ein Passkey auf diesem Gerät.",
+    "addedOn": "Hinzugefügt {date}",
+    "added": "Sicherheitsschlüssel hinzugefügt",
+    "lastUsed": "Zuletzt verwendet {date}",
+    "neverUsed": "Noch nicht verwendet",
+    "rename": "Umbenennen",
+    "remove": "Entfernen",
+    "lastFactor": "Letzter zweiter Faktor; zuerst einen weiteren hinzufügen, dann diesen entfernen.",
+    "renameLabel": "Neuer Name für „{name}“",
+    "renameHint": "Bis zu {max} Zeichen.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "renamed": "Sicherheitsschlüssel umbenannt",
+    "add": "Sicherheitsschlüssel hinzufügen"
+  },
+  "codes": {
+    "title": "Wiederherstellungscodes",
+    "left": "{count, plural, =0 {Keine Codes übrig} one {# Code übrig} other {# Codes übrig}}",
+    "noneShort": "Keine",
+    "description": "Jeder Code meldet einmal an, wenn der zweite Faktor nicht zur Hand ist.",
+    "low": "Nur noch wenige Codes übrig. Rechtzeitig neue erzeugen.",
+    "none": "Wiederherstellungscodes entstehen zusammen mit dem ersten zweiten Faktor.",
+    "regenerate": "Neue Codes erzeugen",
+    "firstHeading": "Wiederherstellungscodes",
+    "newHeading": "Neue Wiederherstellungscodes",
+    "done": "Fertig"
+  },
+  "done": {
+    "removeTotp": "Authenticator-App entfernt",
+    "removeKey": "Sicherheitsschlüssel entfernt",
+    "regenerate": "Neue Wiederherstellungscodes erzeugt"
+  },
+  "confirm": {
+    "removeTotp": {
+      "title": "Authenticator-App entfernen?",
+      "detail": "Ihre Codes melden dann nicht mehr an.",
+      "action": "Entfernen"
+    },
+    "removeKey": {
+      "title": "Diesen Sicherheitsschlüssel entfernen?",
+      "detail": "Er meldet dann nicht mehr an.",
+      "action": "Entfernen"
+    },
+    "regenerate": {
+      "title": "Neue Wiederherstellungscodes erzeugen?",
+      "detail": "Die bisherigen Wiederherstellungscodes funktionieren sofort nicht mehr. Die neuen werden einmal angezeigt.",
+      "action": "Neue Codes erzeugen"
+    },
+    "lastFactorNote": "Das ist der letzte zweite Faktor: Die Wiederherstellungscodes werden mit ihm gelöscht, die Anmeldung läuft dann nur noch mit dem Passwort.",
+    "passwordLabel": "Passwort",
+    "passwordHint": "Zur Bestätigung. In den nächsten 10 Minuten wird nicht erneut gefragt.",
+    "passwordToggle": "Passwort",
+    "passwordMissing": "Passwort eingeben.",
+    "passwordWrong": "Dieses Passwort ist nicht korrekt.",
+    "cancel": "Abbrechen",
+    "working": "Einen Moment …"
+  }
+}

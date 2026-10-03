@@ -1,0 +1,16 @@
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+.git
+.github
+.env*
+!.env.example
+PROJECT_BRIEF.md
+.DS_Store
+*.log
+# Custom translations of an installation are mounted at run time, never
+# built into an image.
+locales
+# Test run output
+tests/.artifacts

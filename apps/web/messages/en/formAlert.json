@@ -1,0 +1,5 @@
+{
+  "errorPrefix": "Error:",
+  "warningPrefix": "Warning:",
+  "infoPrefix": "Note:"
+}

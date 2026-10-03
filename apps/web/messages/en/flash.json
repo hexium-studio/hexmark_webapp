@@ -1,0 +1,10 @@
+{
+  "adminCreated": {
+    "title": "Admin account created",
+    "message": "One last step: remove the setup token."
+  },
+  "setupSaved": {
+    "title": "Setup saved",
+    "message": "One last step: remove the setup token."
+  }
+}

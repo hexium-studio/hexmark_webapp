@@ -1,0 +1,6 @@
+{
+  "stepPrefix": "Step {number}:",
+  "done": "Done",
+  "current": "Current step",
+  "todo": "Not started"
+}

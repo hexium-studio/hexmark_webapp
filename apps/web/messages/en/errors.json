@@ -1,0 +1,49 @@
+{
+  "required": "This field is required.",
+  "invalid_type": "This value is not valid.",
+  "too_short": "Use at least {min} characters.",
+  "too_long": "Use at most {max} characters.",
+  "invalid_format": "This value does not have the required format.",
+  "invalid_email": "Enter a valid e-mail address.",
+  "invalid_option": "Choose one of the offered options.",
+  "mismatch": "The values do not match.",
+  "taken": "This value is already in use.",
+  "invalid_body": "Send the form fields as a JSON object.",
+  "invalid": "This value is not valid.",
+  "fields": {
+    "displayName": {
+      "required": "Enter a display name."
+    },
+    "username": {
+      "required": "Enter a username.",
+      "invalid_format": "Use letters, digits, ‘_’ and ‘-’ only, starting with a letter or digit.",
+      "taken": "This username is already taken."
+    },
+    "email": {
+      "required": "Enter an e-mail address.",
+      "taken": "This e-mail address is already in use."
+    },
+    "password": {
+      "required": "Enter a password."
+    },
+    "passwordConfirm": {
+      "required": "Confirm your password.",
+      "mismatch": "The passwords do not match."
+    },
+    "setupToken": {
+      "required": "Enter the setup token.",
+      "invalid_format": "The setup token is {length} characters, letters A–Z and digits 0–9."
+    },
+    "locale": {
+      "required": "Choose a language.",
+      "invalid_option": "Choose one of the offered languages."
+    },
+    "keyName": {
+      "required": "Enter a name for the security key."
+    },
+    "timezone": {
+      "required": "Choose a time zone.",
+      "invalid_option": "Choose one of the offered time zones."
+    }
+  }
+}

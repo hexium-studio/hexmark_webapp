@@ -1,0 +1,225 @@
+{
+  "metaTitle": "Hexmark einrichten",
+  "title": "Hexmark einrichten",
+  "lead": "Wenige kurze Schritte bis zum ersten Administratorkonto und einer eingerichteten Installation.",
+  "progressLabel": "Einrichtungsschritte",
+  "stepCounter": "Schritt {current} von {total}",
+  "steps": {
+    "language": {
+      "title": "Sprache",
+      "intro": "Die Sprache für die Einrichtung wählen. Sie wird zugleich die Standardsprache dieser Hexmark-Installation."
+    },
+    "connection": {
+      "title": "Verbindungsprüfung",
+      "intro": "Hexmark prüft zuerst, ob alle Teile der Installation einander erreichen."
+    },
+    "token": {
+      "title": "Setup-Token",
+      "intro": "Das Setup-Token aus der Serverkonfiguration eingeben (<code>SETUP_TOKEN</code> in <code>.env</code>). Es belegt den Zugriff auf diese Installation."
+    },
+    "account": {
+      "title": "Admin-Konto",
+      "intro": "Das erste Konto anlegen. Es wird zum Administrator dieser Hexmark-Installation."
+    },
+    "twoFactor": {
+      "title": "Zwei-Faktor-Authentifizierung",
+      "intro": "Empfohlen: Ein zweiter Faktor schützt das Administratorkonto auch dann, wenn sein Passwort bekannt wird. Eine Authenticator-App, einen Sicherheitsschlüssel oder beides einrichten."
+    },
+    "settings": {
+      "title": "Systemeinstellungen",
+      "intro": "Einstellungen dieser Hexmark-Installation. Sie lassen sich später ändern."
+    }
+  },
+  "language": {
+    "legend": "Sprache wählen",
+    "saving": "Wird gespeichert …",
+    "changed": "Sprache auf {name} umgestellt.",
+    "browserLanguage": "Browsersprache",
+    "addedOnServer": "Auf diesem Server hinzugefügt",
+    "otherLanguages": "Weitere Sprachen"
+  },
+  "connection": {
+    "labels": {
+      "server": "Web-App zum Server",
+      "database": "Server zur Datenbank",
+      "config": "Serverkonfiguration",
+      "token": "Setup-Token"
+    },
+    "detail": {
+      "serverUnreachable": "Die Web-App erreicht den Hexmark-Server nicht. Prüfen, ob der Server läuft und <code>SERVER_INTERNAL_URL</code> auf ihn zeigt.",
+      "serverUnexpected": "Der Server hat unerwartet geantwortet (HTTP {status}). Das Serverprotokoll prüfen.",
+      "serverPass": "Der Server ist erreichbar.",
+      "notChecked": "Nicht geprüft, weil der Server nicht geantwortet hat.",
+      "databaseUnreachable": "Der Server erreicht die Datenbank nicht. Die <code>POSTGRES_*</code>-Werte in <code>.env</code> prüfen und ob PostgreSQL läuft.",
+      "databaseNotMigrated": "Die Datenbank ist erreichbar, aber ihre Tabellen sind noch nicht eingerichtet. Der Server richtet sie beim Start ein; das Serverprotokoll prüfen.",
+      "databasePass": "Die Datenbank ist erreichbar und auf dem aktuellen Stand.",
+      "configPass": "Die Schlüssel des Servers sind eingerichtet.",
+      "configMissing": "<code>INTERNAL_API_KEY</code> oder <code>ENCRYPTION_KEY</code> fehlt auf dem Server oder ist ungültig. Wie in <code>.env.example</code> beschrieben erzeugen, in <code>.env</code> eintragen und den Server neu starten.",
+      "tokenPass": "Auf dem Server ist ein gültiges Setup-Token eingerichtet.",
+      "tokenInvalid": "<code>SETUP_TOKEN</code> ist auf dem Server gesetzt, aber ungültig. Es muss genau {length} Zeichen lang sein, A–Z und 0–9. In <code>.env</code> eintragen und den Server neu starten.",
+      "tokenMissing": "<code>SETUP_TOKEN</code> ist auf dem Server nicht gesetzt. Es muss genau {length} Zeichen lang sein, A–Z und 0–9. In <code>.env</code> eintragen und den Server neu starten.",
+      "tokenUnknown": "<code>SETUP_TOKEN</code> fehlt auf dem Server oder ist ungültig. Es muss genau {length} Zeichen lang sein, A–Z und 0–9. In <code>.env</code> eintragen und den Server neu starten."
+    },
+    "summaryPassed": "Alle Prüfungen bestanden.",
+    "summaryFailed": "{failed} von {total} Prüfungen nicht bestanden.",
+    "announceChecking": "Verbindung wird geprüft …",
+    "announceFinished": "Prüfung abgeschlossen. {summary}",
+    "checkAgain": "Erneut prüfen",
+    "checking": "Wird geprüft …",
+    "fixNote": "Die fehlgeschlagenen Prüfungen beheben und erneut prüfen. Weiter geht es, sobald alle Prüfungen bestanden sind."
+  },
+  "token": {
+    "legend": "Setup-Token",
+    "hint": "{length} Zeichen, Buchstaben A–Z und Ziffern 0–9. Kleinbuchstaben gehen auch, und das ganze Token lässt sich auf einmal einfügen.",
+    "toggleSubject": "Setup-Token",
+    "verify": "Token prüfen",
+    "verifying": "Wird geprüft …",
+    "progress": "Alle {length} Zeichen eingeben ({entered} von {length} eingegeben)."
+  },
+  "account": {
+    "fields": {
+      "displayName": {
+        "label": "Anzeigename"
+      },
+      "username": {
+        "label": "Benutzername"
+      },
+      "email": {
+        "label": "E‑Mail-Adresse"
+      },
+      "password": {
+        "label": "Passwort",
+        "toggleSubject": "Passwort"
+      },
+      "passwordConfirm": {
+        "label": "Passwort bestätigen",
+        "toggleSubject": "Passwortbestätigung"
+      }
+    },
+    "rules": {
+      "met": "(erfüllt)",
+      "displayNameLength": "{min}–{max} Zeichen",
+      "usernameLength": "{min}–{max} Zeichen",
+      "usernameChars": "a–z, 0–9, _ und -, nicht am Anfang _ oder -",
+      "emailValid": "Gültige E‑Mail-Adresse",
+      "passwordLength": "{min}–{max} Zeichen",
+      "passwordMatch": "Stimmt mit dem Passwort überein"
+    },
+    "create": "Admin-Konto anlegen",
+    "creating": "Konto wird angelegt …",
+    "blocked": "Zum Anlegen alle Felder ausfüllen. Noch fehlend oder ungültig: {fields}.",
+    "ready": "Alle Felder sind vollständig.",
+    "verifyFirst": "Zuerst das Setup-Token prüfen.",
+    "enterToken": "Setup-Token eingeben",
+    "enterTokenAgain": "Setup-Token erneut eingeben",
+    "backToConnection": "Zurück zur Verbindungsprüfung",
+    "created": {
+      "title": "Admin-Konto angelegt",
+      "detail": "Als Nächstes mit einem zweiten Faktor schützen."
+    }
+  },
+  "errors": {
+    "invalid_token": {
+      "title": "Setup-Token nicht akzeptiert",
+      "detail": "Das Token auf dem Server hat sich möglicherweise geändert. Das Setup-Token erneut eingeben."
+    },
+    "wrong_token": {
+      "title": "Setup-Token nicht korrekt",
+      "detail": "Mit SETUP_TOKEN auf dem Server vergleichen und erneut versuchen."
+    },
+    "rate_limited": {
+      "title": "Zu viele Versuche",
+      "detail": "Nach mehreren falschen Setup-Tokens pausiert die Einrichtung. In 15 Minuten erneut versuchen."
+    },
+    "setup_token_not_configured": {
+      "title": "Kein gültiges Setup-Token auf dem Server",
+      "detail": "SETUP_TOKEN fehlt auf dem Server oder ist ungültig, daher lässt sich die Einrichtung nicht abschließen. Details zeigt die Verbindungsprüfung."
+    },
+    "server_not_configured": {
+      "title": "Serverkonfiguration unvollständig",
+      "detail": "Auf dem Server fehlt ein erforderlicher Schlüssel oder er ist ungültig, daher lässt sich die Einrichtung nicht abschließen. Details zeigt die Verbindungsprüfung."
+    },
+    "database_unavailable": {
+      "title": "Datenbank nicht verfügbar",
+      "detail": "Gleich noch einmal versuchen. Falls es wieder auftritt, zurück zur Verbindungsprüfung."
+    },
+    "setup_closed": {
+      "title": "Einrichtung bereits abgeschlossen",
+      "detail": "Die Seite wird neu geladen."
+    },
+    "server_unreachable": {
+      "title": "Server nicht erreichbar",
+      "detail": "Prüfen, ob der Hexmark-Server läuft, dann erneut versuchen."
+    },
+    "unexpected": {
+      "title": "Fehler auf dem Server",
+      "detail": "Erneut versuchen. Falls es wieder auftritt, das Serverprotokoll prüfen."
+    }
+  },
+  "twoFactor": {
+    "app": {
+      "title": "Authenticator-App",
+      "description": "Eine App auf Handy oder Computer, die alle 30 Sekunden einen neuen 6-stelligen Code anzeigt.",
+      "enabled": "Eingerichtet",
+      "disabled": "Nicht eingerichtet",
+      "start": "Authenticator-App einrichten"
+    },
+    "keys": {
+      "title": "Sicherheitsschlüssel",
+      "description": "Ein Hardware-Schlüssel wie ein YubiKey oder ein Passkey auf diesem Gerät. Mehrere Schlüssel sind möglich.",
+      "none": "Noch keiner",
+      "count": "{count, plural, one {# Schlüssel hinzugefügt} other {# Schlüssel hinzugefügt}}"
+    },
+    "codesHeading": "Wiederherstellungscodes",
+    "codesDone": "Fertig",
+    "continue": "Weiter",
+    "skip": "Vorerst überspringen",
+    "skipNote": "Das lässt sich später auf der Sicherheitsseite des Kontos einrichten.",
+    "skipConfirm": {
+      "title": "Ohne Zwei-Faktor-Authentifizierung fortfahren?",
+      "detail": "Das Administratorkonto ist dann nur durch sein Passwort geschützt. Ein zweiter Faktor lässt sich später auf der Sicherheitsseite des Kontos hinzufügen.",
+      "stay": "Zweiten Faktor einrichten",
+      "skip": "Trotzdem überspringen"
+    }
+  },
+  "settings": {
+    "timezone": {
+      "label": "Standard-Zeitzone",
+      "hint": "Datum und Uhrzeit erscheinen in dieser Zone, sofern jemand keine eigene wählt. Vorausgewählt: die Zone dieses Browsers.",
+      "regions": {
+        "UTC": "Koordinierte Weltzeit",
+        "Africa": "Afrika",
+        "America": "Amerika",
+        "Antarctica": "Antarktis",
+        "Arctic": "Arktis",
+        "Asia": "Asien",
+        "Atlantic": "Atlantik",
+        "Australia": "Australien",
+        "Europe": "Europa",
+        "Indian": "Indischer Ozean",
+        "Pacific": "Pazifik"
+      }
+    },
+    "require": {
+      "label": "Zwei-Faktor-Authentifizierung für alle Konten verlangen",
+      "hint": "Konten ohne zweiten Faktor müssen bei der nächsten Anmeldung einen einrichten.",
+      "needsFactor": "Verfügbar, sobald das eigene Konto einen zweiten Faktor hat (Schritt 5) – damit sich niemand selbst aussperrt.",
+      "backToStep": "Zurück zu Schritt 5"
+    },
+    "finish": "Einrichtung abschließen",
+    "finishing": "Wird gespeichert …"
+  },
+  "ticket": {
+    "expired": {
+      "title": "Die Einrichtungssitzung ist abgelaufen",
+      "detail": "Zwei-Faktor-Authentifizierung und Systemeinstellungen müssen innerhalb von 15 Minuten nach dem Anlegen des Admin-Kontos erledigt werden. Das Admin-Konto existiert, und alles bisher Gespeicherte bleibt erhalten.",
+      "later": "Zum Abschluss das Setup-Token entfernen und dann anmelden. Die Zwei-Faktor-Authentifizierung lässt sich auf der Sicherheitsseite des Kontos einrichten; die Standard-Zeitzone bleibt vorerst UTC.",
+      "continue": "Weiter zum letzten Schritt"
+    },
+    "unavailable": {
+      "title": "Der Server antwortet nicht",
+      "detail": "Die Einrichtung kann erst weitergehen, wenn der Hexmark-Server wieder antwortet.",
+      "retry": "Erneut versuchen"
+    }
+  }
+}

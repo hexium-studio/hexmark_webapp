@@ -18,10 +18,15 @@ of the same API.
 - **Traceability** – every change is logged with actor, time and reason.
 - **Human control** – humans can lock notes against agent edits or hide them from agents.
 
+## Deployment
+
+Reverse proxies, HTTPS, the instance keys in `.env` and backups:
+[docs/deployment.md](docs/deployment.md).
+
 ## Contributing
 
 Bug reports and ideas are welcome as issues. Pull requests are not accepted –
-see [CONTRIBUTING.md](CONTRIBUTING.md).
+see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## Branches
 
@@ -30,7 +35,7 @@ see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Security
 
-Please do not report security issues in public. See [SECURITY.md](SECURITY.md).
+Please do not report security issues in public. See [SECURITY.md](.github/SECURITY.md).
 
 ## License
 
@@ -38,7 +43,7 @@ Hexmark is licensed under the [Apache License 2.0](LICENSE).
 See [NOTICE](NOTICE) for copyright information.
 
 The name "Hexmark" and its logo are not covered by the license –
-see [TRADEMARK.md](TRADEMARK.md).
+see [TRADEMARK.md](docs/TRADEMARK.md).
 
 ---
 

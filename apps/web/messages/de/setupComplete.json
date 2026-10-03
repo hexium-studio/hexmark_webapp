@@ -1,0 +1,16 @@
+{
+  "metaTitle": "Einrichtung abgeschlossen – Hexmark",
+  "title": "Einrichtung abgeschlossen",
+  "lead": "Das Administratorkonto wurde angelegt.",
+  "created": "Das Administratorkonto wurde angelegt.",
+  "heading": "Letzter Schritt: Setup-Token entfernen",
+  "intro": "Solange <code>SETUP_TOKEN</code> auf dem Server gesetzt ist, bleibt die Anmeldung gesperrt. Das Token wird nur einmal gebraucht.",
+  "serverDownTitle": "Der Server antwortet gerade nicht.",
+  "serverDownDetail": "Falls er gerade neu startet, diese Seite neu laden, sobald er wieder läuft.",
+  "instructions": {
+    "removeToken": "Die Zeile <code>SETUP_TOKEN</code> aus der Datei <code>.env</code> löschen oder leer lassen (<code>SETUP_TOKEN=</code>).",
+    "restart": "Den Server neu starten, damit er die Änderung übernimmt. Mit Docker Compose <code>docker compose up -d</code> ausführen; ein einfaches <code>docker compose restart</code> behält den alten Wert.",
+    "reload": "Diese Seite neu laden. Sobald das Token entfernt ist, geht es weiter zu Hexmark."
+  },
+  "reload": "Seite neu laden"
+}

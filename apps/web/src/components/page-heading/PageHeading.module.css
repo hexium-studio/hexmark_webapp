@@ -1,0 +1,55 @@
+/* Kicker 14/600, title 32/1.25/600, intro 17 px, 10 px apart. */
+.heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2-5);
+}
+
+.kicker {
+  display: flex;
+  gap: var(--space-2-5);
+  align-items: center;
+  margin: 0;
+  color: var(--color-accent-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lead);
+}
+
+@container page-shell (min-width: 40rem) {
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+}
+
+/* Setup card (large tier, see PageShell.module.css): kicker 13 px, title
+   28 px, intro 16 px, 8 px apart. */
+@container page-card (min-width: 0) {
+  .heading {
+    gap: var(--space-2);
+  }
+
+  .kicker {
+    font-size: var(--font-size-xs);
+  }
+
+  .title {
+    font-size: var(--font-size-card-title);
+  }
+
+  .intro {
+    font-size: var(--font-size-md);
+  }
+}

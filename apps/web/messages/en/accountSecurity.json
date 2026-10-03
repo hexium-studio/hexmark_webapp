@@ -1,0 +1,83 @@
+{
+  "metaTitle": "Security – Hexmark",
+  "title": "Security",
+  "lead": "Two-factor authentication for {name}.",
+  "home": "Back to home",
+  "required": "Two-factor authentication is required on this Hexmark installation.",
+  "lastFactor": "This is your last second factor, and this installation requires one. Add another factor before removing it.",
+  "unavailable": {
+    "title": "The server is not answering right now.",
+    "detail": "Your security settings cannot be shown. Reload this page in a moment."
+  },
+  "app": {
+    "title": "Authenticator app",
+    "enabled": "On",
+    "disabled": "Off",
+    "descriptionOn": "Codes from your authenticator app confirm your sign-in.",
+    "descriptionOff": "An app on your phone or computer that shows a new 6-digit code every 30 seconds.",
+    "setUp": "Set up authenticator app",
+    "remove": "Remove authenticator app",
+    "added": "Authenticator app added"
+  },
+  "keys": {
+    "title": "Security keys",
+    "count": "{count, plural, one {# key} other {# keys}}",
+    "noneShort": "None",
+    "none": "No security key added yet. A hardware key such as a YubiKey, or a passkey on this device.",
+    "addedOn": "Added {date}",
+    "added": "Security key added",
+    "lastUsed": "Last used {date}",
+    "neverUsed": "Not used yet",
+    "rename": "Rename",
+    "remove": "Remove",
+    "lastFactor": "Your last second factor; add another one before removing it.",
+    "renameLabel": "New name for “{name}”",
+    "renameHint": "Up to {max} characters.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "renamed": "Security key renamed",
+    "add": "Add security key"
+  },
+  "codes": {
+    "title": "Recovery codes",
+    "left": "{count, plural, =0 {No codes left} one {# code left} other {# codes left}}",
+    "noneShort": "None",
+    "description": "Each code signs you in once when your second factor is not at hand.",
+    "low": "Only a few codes are left. Generate new ones before you run out.",
+    "none": "Recovery codes are created together with your first second factor.",
+    "regenerate": "Generate new codes",
+    "firstHeading": "Your recovery codes",
+    "newHeading": "Your new recovery codes",
+    "done": "Done"
+  },
+  "done": {
+    "removeTotp": "Authenticator app removed",
+    "removeKey": "Security key removed",
+    "regenerate": "New recovery codes created"
+  },
+  "confirm": {
+    "removeTotp": {
+      "title": "Remove the authenticator app?",
+      "detail": "Its codes will no longer sign you in.",
+      "action": "Remove"
+    },
+    "removeKey": {
+      "title": "Remove this security key?",
+      "detail": "It will no longer sign you in.",
+      "action": "Remove"
+    },
+    "regenerate": {
+      "title": "Generate new recovery codes?",
+      "detail": "Your current recovery codes stop working at once. The new ones are shown one time.",
+      "action": "Generate new codes"
+    },
+    "lastFactorNote": "It is your last second factor: your recovery codes are deleted with it, and you sign in with your password alone.",
+    "passwordLabel": "Password",
+    "passwordHint": "Confirm it’s you. For the next 10 minutes you will not be asked again.",
+    "passwordToggle": "password",
+    "passwordMissing": "Enter your password.",
+    "passwordWrong": "This password is not correct.",
+    "cancel": "Cancel",
+    "working": "One moment…"
+  }
+}

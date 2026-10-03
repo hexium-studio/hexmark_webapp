@@ -1,0 +1,225 @@
+{
+  "metaTitle": "Set up Hexmark",
+  "title": "Set up Hexmark",
+  "lead": "A few short steps set up the first administrator account and this installation.",
+  "progressLabel": "Setup steps",
+  "stepCounter": "Step {current} of {total}",
+  "steps": {
+    "language": {
+      "title": "Language",
+      "intro": "Choose the language for the setup. It also becomes the default language of this Hexmark installation."
+    },
+    "connection": {
+      "title": "Connection check",
+      "intro": "Hexmark first checks that all parts of the installation can reach each other."
+    },
+    "token": {
+      "title": "Setup token",
+      "intro": "Enter the setup token from the server configuration (<code>SETUP_TOKEN</code> in <code>.env</code>). It shows that you control this installation."
+    },
+    "account": {
+      "title": "Admin account",
+      "intro": "Create the first account. It becomes the administrator of this Hexmark installation."
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "intro": "Recommended: a second factor protects the administrator account even if its password becomes known. Set up an authenticator app, a security key, or both."
+    },
+    "settings": {
+      "title": "System settings",
+      "intro": "Settings for this Hexmark installation. You can change them later."
+    }
+  },
+  "language": {
+    "legend": "Choose a language",
+    "saving": "Saving…",
+    "changed": "Language changed to {name}.",
+    "browserLanguage": "Browser language",
+    "addedOnServer": "Added on this server",
+    "otherLanguages": "Other languages"
+  },
+  "connection": {
+    "labels": {
+      "server": "Web app to server",
+      "database": "Server to database",
+      "config": "Server configuration",
+      "token": "Setup token"
+    },
+    "detail": {
+      "serverUnreachable": "The web app cannot reach the Hexmark server. Make sure the server is running and that <code>SERVER_INTERNAL_URL</code> points to it.",
+      "serverUnexpected": "The server sent an unexpected answer (HTTP {status}). Check the server log.",
+      "serverPass": "The server is reachable.",
+      "notChecked": "Not checked, because the server did not answer.",
+      "databaseUnreachable": "The server cannot reach the database. Check the <code>POSTGRES_*</code> values in <code>.env</code> and that PostgreSQL is running.",
+      "databaseNotMigrated": "The database is reachable, but its tables are not set up yet. The server sets them up when it starts; check the server log.",
+      "databasePass": "The database is reachable and up to date.",
+      "configPass": "The server's keys are configured.",
+      "configMissing": "<code>INTERNAL_API_KEY</code> or <code>ENCRYPTION_KEY</code> on the server is missing or not valid. Generate them as described in <code>.env.example</code>, set them in <code>.env</code> and restart.",
+      "tokenPass": "A valid setup token is configured on the server.",
+      "tokenInvalid": "<code>SETUP_TOKEN</code> on the server is set, but not valid. It must be exactly {length} characters, A–Z and 0–9. Set it in <code>.env</code> and restart the server.",
+      "tokenMissing": "<code>SETUP_TOKEN</code> on the server is not set. It must be exactly {length} characters, A–Z and 0–9. Set it in <code>.env</code> and restart the server.",
+      "tokenUnknown": "<code>SETUP_TOKEN</code> on the server is missing or not valid. It must be exactly {length} characters, A–Z and 0–9. Set it in <code>.env</code> and restart the server."
+    },
+    "summaryPassed": "All checks passed.",
+    "summaryFailed": "{failed} of {total} checks did not pass.",
+    "announceChecking": "Checking the connection…",
+    "announceFinished": "Check finished. {summary}",
+    "checkAgain": "Check again",
+    "checking": "Checking…",
+    "fixNote": "Fix the failed checks, then check again. You can continue once all checks pass."
+  },
+  "token": {
+    "legend": "Setup token",
+    "hint": "{length} characters, letters A–Z and digits 0–9. Lower case is fine, and you can paste the whole token.",
+    "toggleSubject": "setup token",
+    "verify": "Verify token",
+    "verifying": "Verifying…",
+    "progress": "Enter all {length} characters ({entered} of {length} entered)."
+  },
+  "account": {
+    "fields": {
+      "displayName": {
+        "label": "Display name"
+      },
+      "username": {
+        "label": "Username"
+      },
+      "email": {
+        "label": "E-mail address"
+      },
+      "password": {
+        "label": "Password",
+        "toggleSubject": "password"
+      },
+      "passwordConfirm": {
+        "label": "Confirm password",
+        "toggleSubject": "password confirmation"
+      }
+    },
+    "rules": {
+      "met": "(met)",
+      "displayNameLength": "{min}–{max} characters",
+      "usernameLength": "{min}–{max} characters",
+      "usernameChars": "a–z, 0–9, _ and -, not starting with _ or -",
+      "emailValid": "A valid e-mail address",
+      "passwordLength": "{min}–{max} characters",
+      "passwordMatch": "Matches the password"
+    },
+    "create": "Create admin account",
+    "creating": "Creating account…",
+    "blocked": "Complete all fields to create the account. Still missing or not valid: {fields}.",
+    "ready": "All fields are complete.",
+    "verifyFirst": "Verify the setup token first.",
+    "enterToken": "Enter the setup token",
+    "enterTokenAgain": "Enter the setup token again",
+    "backToConnection": "Back to connection check",
+    "created": {
+      "title": "Admin account created",
+      "detail": "Next: protect it with a second factor."
+    }
+  },
+  "errors": {
+    "invalid_token": {
+      "title": "Setup token not accepted",
+      "detail": "The token on the server may have changed. Enter the setup token again."
+    },
+    "wrong_token": {
+      "title": "Setup token not correct",
+      "detail": "Compare it with SETUP_TOKEN on the server and try again."
+    },
+    "rate_limited": {
+      "title": "Too many attempts",
+      "detail": "Setup is paused after several wrong setup tokens. Try again in 15 minutes."
+    },
+    "setup_token_not_configured": {
+      "title": "No valid setup token on the server",
+      "detail": "SETUP_TOKEN is missing or invalid on the server, so setup cannot finish. Go back to the connection check for details."
+    },
+    "server_not_configured": {
+      "title": "Server configuration incomplete",
+      "detail": "A required key is missing or invalid on the server, so setup cannot finish. Go back to the connection check for details."
+    },
+    "database_unavailable": {
+      "title": "Database not available",
+      "detail": "Try again in a moment. If it keeps happening, go back to the connection check."
+    },
+    "setup_closed": {
+      "title": "Setup already completed",
+      "detail": "Reloading the page."
+    },
+    "server_unreachable": {
+      "title": "Server not reachable",
+      "detail": "Make sure the Hexmark server is running, then try again."
+    },
+    "unexpected": {
+      "title": "Something went wrong on the server",
+      "detail": "Try again. If it keeps happening, check the server log."
+    }
+  },
+  "twoFactor": {
+    "app": {
+      "title": "Authenticator app",
+      "description": "An app on your phone or computer that shows a new 6-digit code every 30 seconds.",
+      "enabled": "Set up",
+      "disabled": "Not set up",
+      "start": "Set up authenticator app"
+    },
+    "keys": {
+      "title": "Security keys",
+      "description": "A hardware key such as a YubiKey, or a passkey on this device. Several keys can be added.",
+      "none": "None yet",
+      "count": "{count, plural, one {# key added} other {# keys added}}"
+    },
+    "codesHeading": "Recovery codes",
+    "codesDone": "Done",
+    "continue": "Continue",
+    "skip": "Skip for now",
+    "skipNote": "You can set it up later on your account’s security page.",
+    "skipConfirm": {
+      "title": "Continue without two-factor authentication?",
+      "detail": "The administrator account is then protected by its password alone. You can add a second factor later on your account’s security page.",
+      "stay": "Set up a second factor",
+      "skip": "Skip anyway"
+    }
+  },
+  "settings": {
+    "timezone": {
+      "label": "Default time zone",
+      "hint": "Dates and times are shown in this zone, unless a user picks their own. Preselected: the zone of this browser.",
+      "regions": {
+        "UTC": "Coordinated Universal Time",
+        "Africa": "Africa",
+        "America": "America",
+        "Antarctica": "Antarctica",
+        "Arctic": "Arctic",
+        "Asia": "Asia",
+        "Atlantic": "Atlantic",
+        "Australia": "Australia",
+        "Europe": "Europe",
+        "Indian": "Indian Ocean",
+        "Pacific": "Pacific"
+      }
+    },
+    "require": {
+      "label": "Require two-factor authentication for all users",
+      "hint": "Users without a second factor must set one up the next time they sign in.",
+      "needsFactor": "Available once your own account has a second factor (step 5), so you cannot lock yourself out.",
+      "backToStep": "Back to step 5"
+    },
+    "finish": "Finish setup",
+    "finishing": "Saving…"
+  },
+  "ticket": {
+    "expired": {
+      "title": "The setup session has expired",
+      "detail": "Two-factor authentication and the system settings must be done within 15 minutes of creating the admin account. The admin account exists, and what was saved so far is kept.",
+      "later": "Finish setup by removing the setup token, then sign in. You can set up two-factor authentication on your account’s security page; the default time zone stays UTC for now.",
+      "continue": "Continue to the last step"
+    },
+    "unavailable": {
+      "title": "The server is not answering",
+      "detail": "The setup cannot continue until the Hexmark server answers again.",
+      "retry": "Try again"
+    }
+  }
+}
