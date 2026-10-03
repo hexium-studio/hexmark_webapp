@@ -1,13 +1,13 @@
 # Development stack: builds both images from this repository.
+# Copy .env.example to .env, set POSTGRES_PASSWORD, then run:
 #   docker compose -f compose.dev.yaml up -d --build
-# The defaults below are for local development only.
 
 services:
   db:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-hexmark}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hexmark-dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-hexmark}
     volumes:
       # PostgreSQL 18+ images keep their data below /var/lib/postgresql.
@@ -26,7 +26,11 @@ services:
       context: .
       dockerfile: apps/server/Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-hexmark}:${POSTGRES_PASSWORD:-hexmark-dev}@db:5432/${POSTGRES_DB:-hexmark}
+      POSTGRES_USER: ${POSTGRES_USER:-hexmark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hexmark}
+      DB_HOST: db
+      DB_PORT: 5432
       PORT: 3001
       SETUP_TOKEN: ${SETUP_TOKEN:-}
     ports:
@@ -41,8 +45,14 @@ services:
       dockerfile: apps/web/Dockerfile
     environment:
       PORT: 3000
+      # Server-to-server URL of the API (setup wizard, later all API calls).
+      SERVER_INTERNAL_URL: http://server:3001
     ports:
       - "${WEB_PORT:-3000}:3000"
+    volumes:
+      # Optional custom UI translations, read at start (docs/translations.md).
+      # Docker creates an empty ./locales if it does not exist.
+      - ./locales:/app/locales/custom:ro
     depends_on:
       server:
         condition: service_started

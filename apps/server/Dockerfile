@@ -28,6 +28,9 @@ WORKDIR /app
 COPY --from=build /out/package.json ./package.json
 COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /repo/apps/server/dist ./dist
+# SQL migrations, applied by the server on every start (resolved as ../drizzle
+# from dist/index.js).
+COPY --from=build /repo/apps/server/drizzle ./drizzle
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
