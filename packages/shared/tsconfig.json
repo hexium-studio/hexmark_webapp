@@ -1,4 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // translation-files.ts reads files (server and tools only); like
+    // apps/web, it uses the root's @types/node.
+    "types": ["node"]
+  },
   "include": ["src"]
 }
