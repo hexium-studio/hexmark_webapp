@@ -1,2 +1,3 @@
-// Drizzle table definitions. Empty until the data model is specified.
-export {};
+// Drizzle table definitions, one file per table.
+export * from "./instance-settings";
+export * from "./users";
