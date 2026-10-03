@@ -10,13 +10,15 @@ import { StepList } from "@/components/step-list/StepList";
 import type { LocaleBlock, LocaleInfo } from "@/lib/locales/locale-info";
 import { RICH_TAGS } from "@/lib/rich-tags";
 import type { SetupStatusResult } from "@/lib/setup-status";
-import { setupProgress } from "@/lib/setup-steps";
+import { setupProgress, TICKET_STEP_IDS } from "@/lib/setup-steps";
+import type { SetupTicketState } from "@/lib/setup-ticket";
 import styles from "./SetupWizard.module.css";
 import { SETUP_STEPS } from "./steps";
 import type { WizardControls, WizardData } from "./wizard-types";
 
 export interface SetupWizardProps {
   status: SetupStatusResult;
+  ticket: SetupTicketState;
   // In display order, flat and in blocks (lib/locales/picker-locales.ts).
   locales: readonly LocaleInfo[];
   localeBlocks: readonly LocaleBlock[];
@@ -24,13 +26,17 @@ export interface SetupWizardProps {
 
 const HEADING_ID = "setup-step-heading";
 
+// The first step after the admin account: where a reload with a setup
+// ticket continues.
+const FIRST_TICKET_STEP = SETUP_STEPS.findIndex((step) => step.id === TICKET_STEP_IDS[0]);
+
 // Holds the current step and the data collected so far. Data lives in
 // client state only (the verified token is not stored anywhere else), so it
 // survives a language change, which re-renders the page with new props.
-export function SetupWizard({ status, locales, localeBlocks }: SetupWizardProps) {
+export function SetupWizard({ status, ticket, locales, localeBlocks }: SetupWizardProps) {
   const t = useTranslations("setup");
   const router = useRouter();
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => (ticket.kind === "none" ? 0 : FIRST_TICKET_STEP));
   const [data, setData] = useState<WizardData>({});
   const headingRef = useRef<HTMLHeadingElement>(null);
   const hasMoved = useRef(false);
@@ -52,6 +58,7 @@ export function SetupWizard({ status, locales, localeBlocks }: SetupWizardProps)
 
   const wizard: WizardControls = {
     status,
+    ticket,
     locales,
     localeBlocks,
     data,

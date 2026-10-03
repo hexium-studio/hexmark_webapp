@@ -1,5 +1,6 @@
 import type { LocaleBlock, LocaleInfo } from "@/lib/locales/locale-info";
 import type { SetupStatusResult } from "@/lib/setup-status";
+import type { SetupTicketState } from "@/lib/setup-ticket";
 
 // Contract between the wizard and its steps. A new step only needs a
 // component taking StepProps and an entry in SETUP_STEPS (steps.tsx).
@@ -8,10 +9,16 @@ import type { SetupStatusResult } from "@/lib/setup-status";
 export interface WizardData {
   // Verified, normalised setup token (step "token"); sent again on submit.
   setupToken?: string;
+  // E-mail address of the admin just created (step "account"), named in the
+  // recovery codes file of step 5. Gone after a reload, which is fine.
+  adminEmail?: string;
 }
 
 export interface WizardControls {
   status: SetupStatusResult;
+  // The setup ticket of steps 5 and 6 and the admin's factors so far; "none"
+  // until the admin account exists.
+  ticket: SetupTicketState;
   // Languages the pickers offer, in display order (lib/locales/picker-locales.ts):
   // as one list, and in the blocks the language step shows.
   locales: readonly LocaleInfo[];

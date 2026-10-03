@@ -1,0 +1,21 @@
+{
+  "metaTitle": "Hexmark",
+  "greeting": "Hello {name}",
+  "role": "Role: <strong>{role}</strong>",
+  "signOut": "Sign out",
+  "signingOut": "Signing out…",
+  "signedOut": {
+    "title": "Signed out",
+    "message": "You have been signed out."
+  },
+  "signedOutLocally": {
+    "title": "Signed out on this device",
+    "message": "The server did not confirm the sign-out. The session ends on its own after its timeout."
+  },
+  "securityLink": "Security settings",
+  "twoFactorMissing": {
+    "title": "Two-factor authentication is not set up",
+    "detail": "Protect your account with an authenticator app or a security key.",
+    "link": "Set up two-factor authentication"
+  }
+}

@@ -14,6 +14,7 @@ export const FLASH_COOKIE = "hexmark_flash";
 
 export const FLASH_TOASTS = {
   adminCreated: "success",
+  setupSaved: "success",
 } as const satisfies Record<string, ToastType>;
 
 export type FlashToastId = keyof typeof FLASH_TOASTS;

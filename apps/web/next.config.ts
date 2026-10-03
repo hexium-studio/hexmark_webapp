@@ -23,6 +23,13 @@ const nextConfig: NextConfig = {
   // @hexmark/shared ships TypeScript source without a build step.
   transpilePackages: ["@hexmark/shared"],
   poweredByHeader: false,
+  // Metadata is resolved before the page is sent, for every browser (the
+  // documented way to turn streaming metadata off). Streamed, it sits in its
+  // own Suspense boundary, which is remounted whenever a server action that
+  // writes a cookie renders the page again (e.g. forced enrolment holding the
+  // session): the document then has no <title> until generateMetadata
+  // answers again, a few hundred milliseconds without a page title.
+  htmlLimitedBots: /.*/,
   // next dev would otherwise write AGENTS.md and CLAUDE.md into apps/web.
   agentRules: false,
 };

@@ -1,0 +1,61 @@
+{
+  "title": "Two-factor authentication",
+  "lead": "Confirm that it’s you with your second factor.",
+  "or": "or",
+  "key": {
+    "use": "Use security key",
+    "waiting": "Waiting for the security key…",
+    "unusable": "Your security key cannot be used in this browser on this page: it needs a secure connection (https://)."
+  },
+  "code": {
+    "legend": "Code from your authenticator app",
+    "hint": "The {length}-digit code the app shows right now.",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "incomplete": "Enter all {length} digits first."
+  },
+  "useRecovery": "Use a recovery code instead",
+  "back": "Back to sign-in",
+  "expired": {
+    "title": "Sign-in expired",
+    "detail": "The time for the second step ran out. Sign in again."
+  },
+  "recovery": {
+    "title": "Use a recovery code",
+    "lead": "Enter one of the recovery codes you saved when you set up two-factor authentication. Each code works once.",
+    "legend": "Recovery code",
+    "hint": "{length} characters, in three groups as on your list. Lower case is fine; you can paste the whole code.",
+    "group": "Recovery code, part {position} of {total}",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "incomplete": "Enter all {length} characters first.",
+    "back": "Back"
+  },
+  "enrolment": {
+    "title": "Set up two-factor authentication",
+    "lead": "This Hexmark installation requires a second factor for every account. Set one up to finish signing in.",
+    "choose": "Choose what to use as your second factor:",
+    "useKey": "Use a security key",
+    "useApp": "Use an authenticator app",
+    "cancel": "Cancel",
+    "back": "Back to sign-in",
+    "codesHeading": "Recovery codes",
+    "finish": "Continue to Hexmark",
+    "finishing": "Signing in…"
+  },
+  "noMethod": {
+    "back": "Back to sign-in",
+    "none": {
+      "title": "No second factor available",
+      "detail": "Your account has no second factor that can be used here, and no recovery codes left. Contact your administrator to regain access."
+    },
+    "keyOnly": {
+      "title": "Security key not usable here",
+      "detail": "Your account can only be confirmed with a security key, which this browser cannot use on this page (it needs a secure connection, https://). Open Hexmark at its https:// address, or contact your administrator."
+    },
+    "enrolment": {
+      "title": "No second factor can be set up here",
+      "detail": "This installation requires a second factor, but none can be set up in this browser on this page. Contact your administrator."
+    }
+  }
+}

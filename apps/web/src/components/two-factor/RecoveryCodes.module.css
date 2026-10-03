@@ -1,0 +1,55 @@
+/* New recovery codes (RecoveryCodes.tsx): a notice, the codes, then the
+   buttons and the confirmation. The codes take as many columns as fill
+   every row (data-columns: 3 or 2) where they fit, one column otherwise. */
+.view {
+  container: recovery-codes / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+/* Warning tint and text colour (>= 4.95:1 in both themes, colors.css). */
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-tint);
+}
+
+.codes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1) var(--space-5);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-code-bg);
+  list-style: none;
+}
+
+@container recovery-codes (min-width: 22rem) {
+  .codes[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Three codes of 14 characters side by side, with the gaps and padding. */
+@container recovery-codes (min-width: 34rem) {
+  .codes[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.code code {
+  font-size: var(--font-size-md);
+  letter-spacing: 0.04em;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

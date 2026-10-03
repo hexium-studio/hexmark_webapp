@@ -14,6 +14,7 @@ export type SetupToastCode = keyof Messages["setup"]["errors"];
 export function needsConnectionCheck(code: SetupErrorCode): boolean {
   return (
     code === "setup_token_not_configured" ||
+    code === "server_not_configured" ||
     code === "database_unavailable" ||
     code === "server_unreachable"
   );

@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import styles from "./FormAlert.module.css";
 
 export interface FormAlertProps {
-  // "error" is announced immediately (role="alert"); "info" politely.
-  tone?: "error" | "info";
+  // "error" and "warning" are announced immediately (role="alert"); "info"
+  // politely.
+  tone?: "error" | "warning" | "info";
   title: string;
   children?: ReactNode;
   // Buttons or links that resolve the problem.
@@ -16,11 +17,9 @@ export interface FormAlertProps {
 export function FormAlert({ tone = "error", title, children, actions }: FormAlertProps) {
   const t = useTranslations("formAlert");
   return (
-    <div className={`${styles.alert} ${styles[tone]}`} role={tone === "error" ? "alert" : "status"}>
+    <div className={`${styles.alert} ${styles[tone]}`} role={tone === "info" ? "status" : "alert"}>
       <p className={styles.title}>
-        <span className="visually-hidden">
-          {t(tone === "error" ? "errorPrefix" : "notePrefix")}{" "}
-        </span>
+        <span className="visually-hidden">{t(`${tone}Prefix`)} </span>
         {title}
       </p>
       {children ? <div className={styles.body}>{children}</div> : null}

@@ -1,0 +1,16 @@
+/* Step 6 (SettingsStep.tsx). The time zone select spans the field; the
+   requirement switch sits in a framed card like the factor cards of step 5. */
+.select {
+  width: 100%;
+}
+
+.requirement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}

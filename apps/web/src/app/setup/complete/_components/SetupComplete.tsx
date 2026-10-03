@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/button/ButtonLink";
 import { FormAlert } from "@/components/form-alert/FormAlert";
+import { InstructionList } from "@/components/instruction-list/InstructionList";
 import { LanguageSwitch } from "@/components/language-switch/LanguageSwitch";
 import { PageHeading } from "@/components/page-heading/PageHeading";
 import { PageShell } from "@/components/page-shell/PageShell";
@@ -52,11 +53,13 @@ export function SetupComplete({ statusConfirmed, locales }: SetupCompleteProps) 
             <p>{t("serverDownDetail")}</p>
           </FormAlert>
         )}
-        <ol className={styles.list}>
-          <li>{t.rich("instructions.removeToken", RICH_TAGS)}</li>
-          <li>{t.rich("instructions.restart", RICH_TAGS)}</li>
-          <li>{t.rich("instructions.reload", RICH_TAGS)}</li>
-        </ol>
+        <InstructionList
+          items={[
+            t.rich("instructions.removeToken", RICH_TAGS),
+            t.rich("instructions.restart", RICH_TAGS),
+            t.rich("instructions.reload", RICH_TAGS),
+          ]}
+        />
         <div>
           <ButtonLink href="/setup/complete">{t("reload")}</ButtonLink>
         </div>

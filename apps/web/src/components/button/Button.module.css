@@ -43,15 +43,16 @@
   color: var(--color-accent-text-strong);
 }
 
-/* Native `disabled` (nothing to submit yet). Disabled controls are exempt
-   from the contrast minimum; the caller explains next to the button why it
-   is disabled. Listed after the hover rules and more specific, so hovering
-   a disabled button changes nothing. */
+/* Native `disabled` (nothing to submit yet): a muted fill without an
+   outline, so it reads as a button that is off, not as an empty field. The
+   caller explains why it is disabled (as a note next to it, or read with the
+   button through aria-describedby). Listed after the hover rules and more
+   specific, so hovering a disabled button changes nothing. */
 .button:disabled,
 .button:disabled:hover {
-  border-color: var(--color-border-control);
-  background: var(--color-code-bg);
-  color: var(--color-text-muted);
+  border-color: var(--color-button-disabled);
+  background: var(--color-button-disabled);
+  color: var(--color-on-button-disabled);
   box-shadow: none;
   cursor: not-allowed;
 }

@@ -8,26 +8,39 @@
   font-weight: 600;
 }
 
+/* The message slot under a field (FieldFrame): hint, error and reserved
+   texts share one grid cell, so the slot is as tall as the tallest of them
+   and keeps that height whichever is shown. */
+.slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.slot > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/* Keeps its room but is neither seen nor read. */
+.concealed {
+  visibility: hidden;
+}
+
 .hint {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
 }
 
-.inputRow {
-  display: flex;
-  gap: var(--space-2);
-}
-
 .input {
   /* Chrome composites the caret of a focused field. Anything painted after
-     the caret in the same stacking context (here the "Show" toggle and the
-     rest of the form) is then moved onto an extra "Overlap" layer, which shows
-     as a box in a different shade on colour-managed displays. Its own stacking
-     context puts the field, and so the caret, last in paint order. */
+     the caret in the same stacking context (the rest of the form) is then
+     moved onto an extra "Overlap" layer, which shows as a box in a
+     different shade on colour-managed displays. Its own stacking context
+     puts the field, and so the caret, last in paint order. */
   position: relative;
   z-index: 1;
-  /* Lets the input shrink next to the toggle instead of overflowing. */
+  /* May shrink below its content's width instead of overflowing. */
   min-width: 0;
   flex: 1 1 auto;
   width: 100%;
@@ -65,6 +78,7 @@
   }
 }
 
+/* Text toggle of the code input ("Show"/"Hide"). */
 .toggle {
   flex: none;
   min-height: var(--control-min-size);

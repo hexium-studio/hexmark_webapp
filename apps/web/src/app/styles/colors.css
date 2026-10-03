@@ -44,7 +44,7 @@
   /* Text */
   --color-text: #09090b;
   --color-text-secondary: #52525b; /* leads, hints, details (may contain code chips) */
-  --color-text-muted: #68686f; /* short notes; on --color-code-bg only for disabled buttons (exempt) */
+  --color-text-muted: #68686f; /* short notes */
 
   /* Accent */
   --color-accent-text: #097382; /* links, labels, secondary buttons on page/card */
@@ -56,7 +56,14 @@
   --color-button-hover: #0c93a7;
   --color-on-button: #09090b;
   --color-focus: #097382;
+  /* Disabled buttons: a muted fill with muted text, so they still read as a
+     button (disabled controls are exempt from the contrast minimum). */
+  --color-button-disabled: #e4e4e7;
+  --color-on-button-disabled: #5f5f67;
   --shadow-hover: 0 10px 28px -12px rgb(12 147 167 / 0.5);
+  /* Lifts the sign-in card a little off the light page; dark mode relies on
+     the border, a shadow would not show on the near-black page. */
+  --shadow-card: 0 1px 2px rgb(9 9 11 / 0.04), 0 18px 40px -24px rgb(9 9 11 / 0.18);
 
   /* Status: each colour is used as text, icon and border on its own tint
      (alerts and toasts). */
@@ -89,7 +96,10 @@
     --color-button-hover: #14b8cf;
     --color-on-button: #09090b;
     --color-focus: #0e9eb3;
+    --color-button-disabled: #27272a;
+    --color-on-button-disabled: #9696a0;
     --shadow-hover: 0 10px 28px -12px rgb(14 158 179 / 0.45);
+    --shadow-card: none;
     --color-success: #4ade80;
     --color-success-tint: #0c1a11;
     --color-warning: #fbbf24;

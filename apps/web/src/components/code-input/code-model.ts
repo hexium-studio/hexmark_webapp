@@ -105,9 +105,12 @@ export function keyCommand(
   const clamp = (target: number) => Math.min(Math.max(target, 0), last);
   // Typing the character a revealed cell already shows leaves the input
   // unchanged, so no change event follows and focus would stay put while
-  // the rest of the code lands one cell too early. Move on as if typed.
+  // the rest of the code lands one cell too early. Handled as if typed: focus
+  // moves on and the (equal) value is reported as a change, so whatever a
+  // change resets (e.g. the red state of a rejected code) is reset here too,
+  // as it is for masked cells, whose input is empty and does change.
   if (!masked && key.length === 1 && acceptedChars(key, rules)[0] === code[index]) {
-    return { focus: clamp(index + 1) };
+    return { code: [...code], focus: clamp(index + 1) };
   }
   const moves: Record<string, number> = {
     ArrowLeft: index - 1,

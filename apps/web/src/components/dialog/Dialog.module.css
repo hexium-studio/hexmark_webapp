@@ -1,0 +1,23 @@
+/* Modal dialog (Dialog.tsx): a card like the sign-in card, 480 px at most,
+   centred by the browser; it scrolls itself when the window is too low.
+   The backdrop dims the page in both themes. No open/close animation. */
+.dialog {
+  width: min(calc(100% - 2 * var(--space-4)), 30rem);
+  max-height: calc(100dvh - 2 * var(--space-4));
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-text);
+  overflow-wrap: break-word;
+}
+
+.dialog::backdrop {
+  background: rgb(9 9 11 / 0.55);
+}
+
+@media (min-width: 30rem) {
+  .dialog {
+    padding: var(--space-6);
+  }
+}

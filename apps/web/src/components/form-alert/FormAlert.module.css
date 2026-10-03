@@ -13,6 +13,11 @@
   background: var(--color-danger-tint);
 }
 
+.warning {
+  border-color: var(--color-warning);
+  background: var(--color-warning-tint);
+}
+
 .info {
   border-color: var(--color-accent-text);
   background: var(--color-info-tint);

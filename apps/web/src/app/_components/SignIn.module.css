@@ -1,0 +1,27 @@
+/* Sign-in form: fields 20 px apart; "Remember me" 12 px below the password
+   (its 44 px row adds another 12 above the box); the full-width button 24 px
+   below that row. */
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4-5);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: var(--space-3);
+}
+
+/* The page's one action: full width and a little taller than other
+   buttons. */
+.submit {
+  width: 100%;
+  min-height: 3rem;
+}

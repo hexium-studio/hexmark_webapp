@@ -4,7 +4,18 @@ import type { StepListItem, StepState } from "@/components/step-list/StepList";
 // /setup/complete. Titles come from the messages ("setup.steps.<id>.title");
 // the wizard pairs each id with its component (steps.tsx).
 
-export const SETUP_STEP_IDS = ["language", "connection", "token", "account"] as const;
+export const SETUP_STEP_IDS = [
+  "language",
+  "connection",
+  "token",
+  "account",
+  "twoFactor",
+  "settings",
+] as const;
+
+// The steps after the admin account exists. They act with the setup ticket
+// (lib/setup-ticket.ts); a reload continues with the first of them.
+export const TICKET_STEP_IDS: readonly SetupStepId[] = ["twoFactor", "settings"];
 
 export type SetupStepId = (typeof SETUP_STEP_IDS)[number];
 

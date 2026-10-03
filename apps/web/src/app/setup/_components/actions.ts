@@ -4,11 +4,16 @@ import type { SetupInput } from "@hexmark/shared";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { queueFlashToast } from "@/components/toast/flash-server";
+import { isRecord } from "@/lib/api-fields";
+import { storeChallenge } from "@/lib/challenge/challenge-store";
+import { readChallenge } from "@/lib/challenge/read-challenge";
 import { callServer } from "@/lib/server-api";
 import { type SetupActionResult, toSetupActionResult } from "./setup-result";
 
 // Server actions of the setup wizard. They forward to the API server, which
 // validates everything again; the token and password are never logged here.
+// Steps 5 and 6 (two-factor authentication, system settings) have their
+// actions in components/two-factor/actions.ts and settings-actions.ts.
 
 // Hashing the password takes a moment; allow more than the default timeout.
 const CREATE_ADMIN_TIMEOUT_MS = 15_000;
@@ -48,11 +53,18 @@ export async function createAdmin(input: SetupInput): Promise<SetupActionResult>
     timeoutMs: CREATE_ADMIN_TIMEOUT_MS,
   });
   const result = toSetupActionResult(response, 201);
-  if (result.ok) {
-    // "Admin account created", shown on the page the redirect leads to.
+  if (!result.ok) return result;
+  // The setup ticket for steps 5 and 6 goes into the challenge cookie. Setup
+  // is closed now; the page renders again in this request and keeps showing
+  // the wizard for this browser (page.tsx), which moves on to step 5.
+  const answer = response.reachable && isRecord(response.body) ? response.body : {};
+  const ticket = readChallenge(answer.ticket);
+  if (!ticket) {
+    // Without a ticket the last steps cannot run: on to the completion page.
     await queueFlashToast("adminCreated");
     // redirect() throws; it must stay outside any try/catch.
     redirect("/setup/complete");
   }
+  await storeChallenge(ticket);
   return result;
 }

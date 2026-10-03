@@ -63,6 +63,22 @@
   padding-top: var(--space-2);
 }
 
+/* The note under the step 3 buttons and an invisible copy of its longest
+   wording share one grid cell, which keeps the height of the longest. */
+.noteSlot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.noteSlot > * {
+  grid-area: 1 / 1;
+}
+
+.concealed {
+  visibility: hidden;
+}
+
 .note {
   margin: 0;
   color: var(--color-text-muted);
@@ -102,7 +118,20 @@
     padding-top: 0;
   }
 
-  .actionsSpaced > .note {
+  .actionsSpaced > .noteSlot {
     flex-basis: 100%;
   }
+}
+
+/* Steps 5 and 6: headings inside the step and the list of key names. */
+.subheading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.keyNames {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  overflow-wrap: anywhere;
 }

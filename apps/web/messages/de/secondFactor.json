@@ -1,0 +1,61 @@
+{
+  "title": "Zwei-Faktor-Authentifizierung",
+  "lead": "Die Anmeldung mit dem zweiten Faktor bestätigen.",
+  "or": "oder",
+  "key": {
+    "use": "Sicherheitsschlüssel verwenden",
+    "waiting": "Warte auf den Sicherheitsschlüssel …",
+    "unusable": "Der Sicherheitsschlüssel lässt sich in diesem Browser auf dieser Seite nicht verwenden: Dafür ist eine sichere Verbindung (https://) nötig."
+  },
+  "code": {
+    "legend": "Code aus der Authenticator-App",
+    "hint": "Der {length}-stellige Code, den die App gerade anzeigt.",
+    "verify": "Prüfen",
+    "verifying": "Wird geprüft …",
+    "incomplete": "Zuerst alle {length} Ziffern eingeben."
+  },
+  "useRecovery": "Stattdessen einen Wiederherstellungscode verwenden",
+  "back": "Zurück zur Anmeldung",
+  "expired": {
+    "title": "Anmeldung abgelaufen",
+    "detail": "Die Zeit für den zweiten Schritt ist abgelaufen. Bitte erneut anmelden."
+  },
+  "recovery": {
+    "title": "Wiederherstellungscode verwenden",
+    "lead": "Einen der Wiederherstellungscodes eingeben, die beim Einrichten der Zwei-Faktor-Authentifizierung gespeichert wurden. Jeder Code funktioniert einmal.",
+    "legend": "Wiederherstellungscode",
+    "hint": "{length} Zeichen, in drei Gruppen wie auf der Liste. Kleinbuchstaben gehen auch; der ganze Code lässt sich einfügen.",
+    "group": "Wiederherstellungscode, Teil {position} von {total}",
+    "verify": "Prüfen",
+    "verifying": "Wird geprüft …",
+    "incomplete": "Zuerst alle {length} Zeichen eingeben.",
+    "back": "Zurück"
+  },
+  "enrolment": {
+    "title": "Zwei-Faktor-Authentifizierung einrichten",
+    "lead": "Diese Hexmark-Installation verlangt für jedes Konto einen zweiten Faktor. Zum Abschluss der Anmeldung einen einrichten.",
+    "choose": "Wählen, was als zweiter Faktor dienen soll:",
+    "useKey": "Sicherheitsschlüssel verwenden",
+    "useApp": "Authenticator-App verwenden",
+    "cancel": "Abbrechen",
+    "back": "Zurück zur Anmeldung",
+    "codesHeading": "Wiederherstellungscodes",
+    "finish": "Weiter zu Hexmark",
+    "finishing": "Anmeldung läuft …"
+  },
+  "noMethod": {
+    "back": "Zurück zur Anmeldung",
+    "none": {
+      "title": "Kein zweiter Faktor verfügbar",
+      "detail": "Für das Konto ist hier kein zweiter Faktor nutzbar, und es sind keine Wiederherstellungscodes mehr übrig. Für den Zugang an die Administration wenden."
+    },
+    "keyOnly": {
+      "title": "Sicherheitsschlüssel hier nicht nutzbar",
+      "detail": "Das Konto lässt sich nur mit einem Sicherheitsschlüssel bestätigen, und dieser Browser kann ihn auf dieser Seite nicht verwenden (dafür ist eine sichere Verbindung nötig, https://). Hexmark über die https://-Adresse öffnen oder an die Administration wenden."
+    },
+    "enrolment": {
+      "title": "Hier lässt sich kein zweiter Faktor einrichten",
+      "detail": "Diese Installation verlangt einen zweiten Faktor, aber in diesem Browser lässt sich auf dieser Seite keiner einrichten. An die Administration wenden."
+    }
+  }
+}

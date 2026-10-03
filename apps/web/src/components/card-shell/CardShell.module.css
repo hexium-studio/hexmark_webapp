@@ -1,0 +1,125 @@
+/* Two tiers, by window width in rem, so large text or zoom moves to the
+   compact tier just like a narrow window:
+   - compact: no card frame; the tinted brand bar is the page header, the
+     content runs full width below it with 16/24 px of padding;
+   - card: one card centred on the page, 520 px wide for a form (440 px of
+     content between 40 px of padding) or 680 px for the blocked state, with
+     1 px border and 16 px radius. It grows with its content (errors never
+     push it); the page scrolls then, nothing inside does. The threshold
+     leaves 40 px of page on each side of the form card. */
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  min-height: 100vh;
+}
+
+.card {
+  /* Grid item: may shrink below its content's width (long words wrap). */
+  min-width: 0;
+}
+
+/* The setup panel's tint, as a band. The tint is a uniform area across the
+   whole window in the compact tier, so it gets the panel pattern (see
+   --panel-pattern in app/styles/colors.css). */
+.brandBar {
+  padding: var(--space-4);
+  background-color: var(--color-info-tint);
+  background-image: var(--panel-pattern);
+}
+
+.body {
+  padding: var(--space-5) var(--space-4) var(--space-6);
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+/* Status line above the title: 13/600, with an optional leading icon. */
+.kicker {
+  display: flex;
+  gap: var(--space-1-5);
+  align-items: start;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.accent {
+  color: var(--color-accent-text);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* 12 px below the title (the grid gap adds 8). */
+.lead {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-5-5);
+}
+
+@media (min-width: 30rem) {
+  .brandBar {
+    padding: var(--space-4-5) var(--space-5);
+  }
+
+  .body {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
+@media (min-width: 37.5rem) {
+  .shell {
+    place-content: center;
+    place-items: center;
+    padding: var(--space-6-5);
+  }
+
+  .card {
+    width: min(100%, 32.5rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .wide .card {
+    width: min(100%, 42.5rem);
+  }
+
+  /* Inside the card's border: the inner radius. */
+  .brandBar {
+    padding: var(--space-5) var(--space-6-5);
+    border-start-start-radius: calc(var(--radius-xl) - 1px);
+    border-start-end-radius: calc(var(--radius-xl) - 1px);
+  }
+
+  .body {
+    padding: var(--space-6) var(--space-6-5) var(--space-6-5);
+  }
+
+  .title {
+    font-size: var(--font-size-card-title);
+  }
+}

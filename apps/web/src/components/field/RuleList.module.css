@@ -1,0 +1,31 @@
+/* Rule checklist under a field (RuleList.tsx); size and colour of the text
+   come from the hint around it (Field.module.css). */
+.rules {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule {
+  display: flex;
+  gap: var(--space-1-5);
+  align-items: flex-start;
+  /* Long words (e.g. in a custom translation) wrap instead of overflowing. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  transition: var(--transition-colors);
+}
+
+.rule[data-met] {
+  color: var(--color-success);
+}
+
+.icon {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  /* Centred on the first line of text. */
+  margin-top: calc((1lh - 1em) / 2);
+}

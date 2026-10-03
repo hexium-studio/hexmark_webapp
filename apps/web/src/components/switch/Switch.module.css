@@ -1,0 +1,89 @@
+/* Switch (Switch.tsx): a 44 x 24 px track, at least 44 px of touch height
+   through the row; the knob is a radial gradient whose position changes,
+   which repaints only. Off: control outline on the card; on: primary fill
+   with the knob in the button text colour. */
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.switch {
+  appearance: none;
+  flex: none;
+  width: 2.75rem;
+  height: 1.5rem;
+  margin: var(--space-0-5) 0 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  background-image: radial-gradient(
+    circle at center,
+    var(--color-border-control) 0 0.5rem,
+    transparent calc(0.5rem + 0.5px)
+  );
+  background-position: left 0.125rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25rem 1.25rem;
+  cursor: pointer;
+  transition:
+    var(--transition-colors),
+    background-position 0.15s;
+}
+
+.switch:checked {
+  border-color: var(--color-button);
+  background-color: var(--color-button);
+  background-image: radial-gradient(
+    circle at center,
+    var(--color-on-button) 0 0.5rem,
+    transparent calc(0.5rem + 0.5px)
+  );
+  background-position: right 0.125rem center;
+}
+
+.switch:hover:not(:disabled) {
+  border-color: var(--color-accent-text);
+}
+
+.switch:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.switch:disabled {
+  border-color: var(--color-button-disabled);
+  background-color: var(--color-button-disabled);
+  cursor: not-allowed;
+}
+
+.text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.label {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch:disabled + .text .label {
+  cursor: not-allowed;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+@media (forced-colors: active) {
+  .switch {
+    appearance: auto;
+  }
+
+  .switch:focus-visible {
+    outline: var(--focus-ring);
+  }
+}

@@ -1,5 +1,6 @@
 import {
   type FieldError,
+  type FieldErrorCode,
   type FieldErrors,
   fieldErrorsFromZod,
   type SetupInput,
@@ -9,8 +10,8 @@ import {
 // Fields of the account step and their client-side validation with the
 // shared schema, so the browser rejects exactly what the server would reject.
 // Errors stay codes (+ params) here; the step translates them when rendering,
-// so they follow a language change. Labels and hints are the messages
-// "setup.account.fields.<name>.*".
+// so they follow a language change. Labels are the messages
+// "setup.account.fields.<name>.*", the rules under each field account-rules.ts.
 
 export type AccountFieldName = Exclude<keyof SetupInput, "setupToken" | "locale">;
 export type AccountErrors = Partial<Record<AccountFieldName, FieldError>>;
@@ -21,13 +22,15 @@ export interface AccountFieldConfig {
   autoComplete: string;
   // Spans both columns of the two-column layout.
   wide?: boolean;
+  // Errors only the server can report (409); the field keeps room for them.
+  serverErrors?: readonly FieldErrorCode[];
 }
 
 // Rendered in this order; the first invalid one receives focus.
 export const ACCOUNT_FIELDS: readonly AccountFieldConfig[] = [
   { name: "displayName", autoComplete: "name" },
-  { name: "username", autoComplete: "username" },
-  { name: "email", type: "email", autoComplete: "email", wide: true },
+  { name: "username", autoComplete: "username", serverErrors: ["taken"] },
+  { name: "email", type: "email", autoComplete: "email", wide: true, serverErrors: ["taken"] },
   { name: "password", type: "password", autoComplete: "new-password" },
   { name: "passwordConfirm", type: "password", autoComplete: "new-password" },
 ];

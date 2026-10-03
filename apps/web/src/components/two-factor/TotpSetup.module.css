@@ -1,0 +1,78 @@
+/* Adding an authenticator app (TotpSetup.tsx): the QR code beside the
+   instructions and the key for manual entry, the code input below. Side by
+   side once the setup is at least 26 rem wide, else stacked. The setup is
+   its own size container, so this follows the space it gets (narrow
+   sign-in card, setup step, account page) rather than the window. */
+.setup {
+  container: totp-setup / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.pairing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@container totp-setup (min-width: 26rem) {
+  .pairing {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+}
+
+/* 160 px, in rem so it grows with the text; the code itself carries its
+   quiet zone in white. The 1 px border shows the edge on the white card. */
+.qr {
+  display: block;
+  width: 10rem;
+  height: 10rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-code-bg);
+}
+
+.manual {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  justify-items: start;
+  min-width: 0;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* The key in groups of four, monospace; long keys wrap between groups. */
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2-5);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.concealed {
+  visibility: hidden;
+}
+
+.confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}

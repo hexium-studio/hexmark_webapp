@@ -1,0 +1,154 @@
+{
+  "totp": {
+    "qrLabel": "QR-Code zum Einrichten der Authenticator-App",
+    "loading": "Einrichtung wird vorbereitet …",
+    "scan": "Den QR-Code mit der Authenticator-App scannen, zum Beispiel auf dem Handy.",
+    "manual": "Scannen klappt nicht? Stattdessen diesen Schlüssel in der App eingeben:",
+    "copyKey": "Schlüssel kopieren",
+    "keyCopied": "Schlüssel kopiert",
+    "codeLegend": "Code aus der App",
+    "codeHint": "Den {length}-stelligen Code eingeben, den die App jetzt anzeigt.",
+    "confirm": "Bestätigen",
+    "confirming": "Wird bestätigt …",
+    "progress": "Alle {length} Ziffern eingeben ({entered} von {length} eingegeben).",
+    "cancel": "Abbrechen"
+  },
+  "key": {
+    "nameLabel": "Name des Sicherheitsschlüssels",
+    "nameHint": "Hilft, die Schlüssel auseinanderzuhalten, z. B. „YubiKey am Schlüsselbund“. Bis zu {max} Zeichen.",
+    "register": "Sicherheitsschlüssel registrieren",
+    "registering": "Warte auf den Sicherheitsschlüssel …",
+    "nameMissing": "Zuerst einen Namen für den Sicherheitsschlüssel eingeben.",
+    "unavailable": {
+      "server": "Sicherheitsschlüssel sind in dieser Hexmark-Installation nicht aktiviert. Die Authenticator-App funktioniert trotzdem.",
+      "browser": "Dieser Browser kann auf dieser Seite keine Sicherheitsschlüssel verwenden: Dafür sind eine sichere Verbindung (https://) und ein Browser nötig, der sie unterstützt."
+    }
+  },
+  "recovery": {
+    "onceTitle": "Diese Codes jetzt speichern.",
+    "onceDetail": "Jeder Code meldet einmal an, wenn der zweite Faktor nicht zur Hand ist. Sie werden nur dieses eine Mal angezeigt.",
+    "copyAll": "Alle kopieren",
+    "copied": "Wiederherstellungscodes kopiert",
+    "download": "Als Datei herunterladen",
+    "savedConfirm": "Ich habe meine Wiederherstellungscodes gespeichert",
+    "savedFirst": "Zuerst bestätigen, dass die Wiederherstellungscodes gespeichert sind.",
+    "file": {
+      "title": "Hexmark-Wiederherstellungscodes",
+      "account": "Konto: {account}",
+      "created": "Erstellt: {date}",
+      "singleUse": "Jeder Code funktioniert einmal, anstelle des zweiten Faktors.",
+      "keepSafe": "Sicher aufbewahren, getrennt vom Passwort."
+    }
+  },
+  "copy": {
+    "failedTitle": "Kopieren nicht möglich",
+    "failedDetail": "Der Browser erlaubt es hier nicht. Den Text markieren und von Hand kopieren."
+  },
+  "errors": {
+    "attemptsLeft": "{count, plural, one {Noch # Versuch} other {Noch # Versuche}}, danach ist eine neue Anmeldung nötig.",
+    "attempts_exhausted": {
+      "title": "Zu viele falsche Eingaben",
+      "detail": "Zur Sicherheit wurde diese Anmeldung beendet. Bitte erneut anmelden."
+    },
+    "challenge_invalid": {
+      "title": "Zeit abgelaufen",
+      "detail": "Dieser Schritt ist nicht mehr gültig. Bitte von vorn beginnen."
+    },
+    "invalid_code": {
+      "title": "Code nicht korrekt",
+      "detail": "Den Code prüfen und erneut versuchen."
+    },
+    "webauthn_failed": {
+      "title": "Sicherheitsschlüssel nicht akzeptiert",
+      "detail": "Die Antwort des Schlüssels ließ sich nicht prüfen. Erneut versuchen oder einen anderen Schlüssel nehmen."
+    },
+    "webauthn_registration_failed": {
+      "title": "Sicherheitsschlüssel nicht registriert",
+      "detail": "Die Antwort des Schlüssels ließ sich nicht prüfen oder kam zu spät. Erneut versuchen."
+    },
+    "webauthn_unavailable": {
+      "title": "Sicherheitsschlüssel nicht verfügbar",
+      "detail": "Diese Hexmark-Installation bietet keine Sicherheitsschlüssel an."
+    },
+    "webauthn_cancelled": {
+      "title": "Abgebrochen",
+      "detail": "Der Sicherheitsschlüssel hat nicht geantwortet: abgebrochen, Zeit abgelaufen oder kein passender Schlüssel verwendet."
+    },
+    "webauthn_browser_failed": {
+      "title": "Sicherheitsschlüssel hat nicht funktioniert",
+      "detail": "Der Browser hat ein Problem mit dem Schlüssel gemeldet. Erneut versuchen oder einen anderen Weg wählen."
+    },
+    "method_unavailable": {
+      "title": "Für dieses Konto nicht eingerichtet",
+      "detail": "Diese Art der Bestätigung ist für das Konto nicht eingerichtet. Eine andere wählen."
+    },
+    "unauthenticated": {
+      "title": "Abgemeldet",
+      "detail": "Die Sitzung ist abgelaufen. Bitte erneut anmelden."
+    },
+    "reauthentication_required": {
+      "title": "Passwort nötig",
+      "detail": "Zum Fortfahren das Passwort bestätigen."
+    },
+    "invalid_password": {
+      "title": "Passwort nicht korrekt",
+      "detail": "Das Passwort prüfen und erneut versuchen."
+    },
+    "totp_already_enabled": {
+      "title": "Bereits eingerichtet",
+      "detail": "Für dieses Konto ist bereits eine Authenticator-App eingerichtet."
+    },
+    "totp_not_pending": {
+      "title": "Einrichtung abgelaufen",
+      "detail": "Die Einrichtung der Authenticator-App erneut beginnen."
+    },
+    "totp_not_enabled": {
+      "title": "Keine Authenticator-App",
+      "detail": "Für dieses Konto ist keine Authenticator-App eingerichtet."
+    },
+    "credential_not_found": {
+      "title": "Sicherheitsschlüssel nicht gefunden",
+      "detail": "Er wurde vielleicht schon entfernt. Die Liste wurde aktualisiert."
+    },
+    "credential_exists": {
+      "title": "Bereits registriert",
+      "detail": "Dieser Sicherheitsschlüssel ist für das Konto bereits registriert."
+    },
+    "last_factor_required": {
+      "title": "Letzter zweiter Faktor",
+      "detail": "Zwei-Faktor-Authentifizierung ist in dieser Installation Pflicht. Zuerst einen weiteren Faktor hinzufügen, dann diesen entfernen."
+    },
+    "second_factor_missing": {
+      "title": "Noch kein zweiter Faktor",
+      "detail": "Zuerst eine Authenticator-App oder einen Sicherheitsschlüssel einrichten."
+    },
+    "rate_limited": {
+      "title": "Zu viele Versuche",
+      "detail": "Ein paar Minuten warten, dann erneut versuchen."
+    },
+    "validation": {
+      "title": "Eingabe nicht akzeptiert",
+      "detail": "Die Eingabe prüfen und erneut versuchen."
+    },
+    "setup_token_present": {
+      "title": "Anmeldung gesperrt",
+      "detail": "Das Setup-Token ist auf dem Server noch gesetzt. Die Seite neu laden."
+    },
+    "server_not_configured": {
+      "title": "Serverkonfiguration unvollständig",
+      "detail": "Ein erforderlicher Schlüssel fehlt auf dem Server oder ist ungültig. Das Serverprotokoll prüfen."
+    },
+    "database_unavailable": {
+      "title": "Datenbank nicht verfügbar",
+      "detail": "Gleich noch einmal versuchen. Wenn es wieder passiert, das Serverprotokoll prüfen."
+    },
+    "server_unreachable": {
+      "title": "Server nicht erreichbar",
+      "detail": "Prüfen, ob der Hexmark-Server läuft, dann erneut versuchen."
+    },
+    "unexpected": {
+      "title": "Auf dem Server ist etwas schiefgelaufen",
+      "detail": "Erneut versuchen. Wenn es wieder passiert, das Serverprotokoll prüfen."
+    }
+  }
+}

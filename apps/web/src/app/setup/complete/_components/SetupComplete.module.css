@@ -36,54 +36,9 @@
   margin-top: 0.0625rem;
 }
 
-/* Numbered instructions as one card; the numbers are drawn by CSS
-   counters, so screen readers still get a plain ordered list. */
-.list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  margin: 0;
-  padding: var(--space-1) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  list-style: none;
-  counter-reset: instruction;
-}
-
-/* Text runs with <code> inside: no grid on the item, which would turn every
-   inline element into its own grid cell. The number sits in the padding. */
-.list > li {
-  position: relative;
-  padding-block: calc(var(--space-4) + var(--space-0-5)) var(--space-4);
-  padding-inline: calc(1.75rem + var(--space-4)) 0;
-  line-height: 1.55;
-  counter-increment: instruction;
-}
-
-.list > li + li {
-  border-top: 1px solid var(--color-border);
-}
-
-.list > li::before {
-  content: counter(instruction);
-  position: absolute;
-  top: var(--space-4);
-  inset-inline-start: 0;
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 2px solid var(--color-accent-text);
-  border-radius: 50%;
-  color: var(--color-accent-text);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  line-height: 1;
-}
-
 /* Setup card (large tier, see PageShell.module.css): 28 px between blocks,
-   heading 26 px, status line 14 px, instructions 15 px in rows 14 px
-   apart. */
+   heading 26 px, status line 14 px (the instructions adapt in
+   components/instruction-list/). */
 @container page-card (min-width: 0) {
   .section {
     gap: var(--space-5-5);
@@ -100,19 +55,5 @@
   .success {
     gap: var(--space-2);
     font-size: var(--font-size-sm);
-  }
-
-  .list {
-    padding: var(--space-1) var(--space-4-5);
-  }
-
-  .list > li {
-    padding-top: var(--space-4);
-    padding-bottom: var(--space-3-5);
-    font-size: var(--font-size-callout);
-  }
-
-  .list > li::before {
-    top: var(--space-3-5);
   }
 }

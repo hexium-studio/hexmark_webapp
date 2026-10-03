@@ -37,6 +37,13 @@
     "locale": {
       "required": "Choose a language.",
       "invalid_option": "Choose one of the offered languages."
+    },
+    "keyName": {
+      "required": "Enter a name for the security key."
+    },
+    "timezone": {
+      "required": "Choose a time zone.",
+      "invalid_option": "Choose one of the offered time zones."
     }
   }
 }

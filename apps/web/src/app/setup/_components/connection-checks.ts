@@ -3,7 +3,7 @@ import type { CheckState } from "@/components/check-status/CheckStatus";
 import type { Messages } from "@/lib/locales/registry";
 import type { SetupStatusResult } from "@/lib/setup-status";
 
-// Turns the status loaded by page.tsx into the three checks of the
+// Turns the status loaded by page.tsx into the four checks of the
 // connection step. Texts are message keys under "setup.connection"; the
 // step translates them.
 
@@ -56,6 +56,18 @@ function tokenCheck(status: SetupStatusResult): ConnectionCheck {
   return { id: "token", state: "fail", detail, values: { length: SETUP_TOKEN_LENGTH } };
 }
 
+// INTERNAL_API_KEY and ENCRYPTION_KEY in the server's .env.
+function configCheck(status: SetupStatusResult): ConnectionCheck {
+  if (status.kind === "server_unreachable" || status.kind === "unexpected_response") {
+    return { id: "config", state: "unknown", detail: "notChecked" };
+  }
+  const configured =
+    status.kind === "ok" ? status.status.secretsConfigured : status.secretsConfigured;
+  return configured
+    ? { id: "config", state: "pass", detail: "configPass" }
+    : { id: "config", state: "fail", detail: "configMissing" };
+}
+
 export function connectionChecks(status: SetupStatusResult): ConnectionCheck[] {
-  return [serverCheck(status), databaseCheck(status), tokenCheck(status)];
+  return [serverCheck(status), databaseCheck(status), configCheck(status), tokenCheck(status)];
 }

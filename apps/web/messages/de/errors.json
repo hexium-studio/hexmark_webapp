@@ -37,6 +37,13 @@
     "locale": {
       "required": "Eine Sprache wählen.",
       "invalid_option": "Eine der angebotenen Sprachen wählen."
+    },
+    "keyName": {
+      "required": "Einen Namen für den Sicherheitsschlüssel eingeben."
+    },
+    "timezone": {
+      "required": "Eine Zeitzone wählen.",
+      "invalid_option": "Eine der angebotenen Zeitzonen wählen."
     }
   }
 }

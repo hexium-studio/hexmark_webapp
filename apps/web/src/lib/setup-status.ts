@@ -7,6 +7,7 @@ import { callServer } from "./server-api";
 const databaseUnavailableSchema = setupStatusSchema.pick({
   database: true,
   setupTokenConfigured: true,
+  secretsConfigured: true,
 });
 
 export type SetupStatusResult =
@@ -16,6 +17,7 @@ export type SetupStatusResult =
       kind: "database_unavailable";
       database: SetupStatus["database"];
       setupTokenConfigured: boolean;
+      secretsConfigured: boolean;
     }
   | { kind: "server_unreachable" }
   // The server answered with something this app does not understand.

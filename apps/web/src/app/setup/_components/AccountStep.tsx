@@ -6,10 +6,12 @@ import { type FormEvent, useEffect, useRef, useState, useTransition } from "reac
 import { Button } from "@/components/button/Button";
 import { useFieldErrorText } from "@/components/field/use-field-error-text";
 import { FormAlert } from "@/components/form-alert/FormAlert";
+import { toast } from "@/components/toast/toast-store";
 import { AccountField, useAccountFieldLabel } from "./AccountField";
 import {
   ACCOUNT_FIELDS,
   type AccountErrors,
+  type AccountFieldName,
   firstInvalidField,
   readAccountValues,
   splitFieldErrors,
@@ -24,14 +26,17 @@ import type { StepProps } from "./wizard-types";
 const SUBMIT_HINT_ID = "account-submit-hint";
 
 // The first admin account. Submits together with the token verified in the
-// token step; on success the server action redirects to /setup/complete and
-// queues the "Admin account created" toast for that page (flash toast).
-// Field rule errors and taken names stay at their fields; problems of the
-// request as a whole (token no longer valid, too many attempts, server or
-// database down, server error) are error toasts.
-// "Create admin account" stays disabled until the shared schema accepts every
-// field. `errors` holds the codes of a submit attempt (e.g. a username the
-// server reports as taken); they win over the live ones until edited.
+// token step; on success the server action keeps the setup ticket for the
+// next steps (challenge cookie) and the wizard moves on to step 5 with an
+// "Admin account created" toast.
+// Each field shows its rules as a checklist that follows the typing; nothing
+// turns red while typing or on leaving a field. "Create admin account" stays
+// disabled until the shared schema accepts every field, so red errors come
+// from the server (a username or e-mail address already taken) and take the
+// checklist's place. Problems of the request as a whole (token no longer
+// valid, too many attempts, server or database down, server error) are error
+// toasts. `errors` holds the codes of a submit attempt; editing a field
+// clears its own.
 export function AccountStep({ wizard }: StepProps) {
   const t = useTranslations("setup");
   const tCommon = useTranslations("common");
@@ -62,6 +67,12 @@ export function AccountStep({ wizard }: StepProps) {
     setFocusRequest((count) => count + 1);
   }
 
+  function blockedNote(fields: readonly AccountFieldName[]) {
+    return t("account.blocked", {
+      fields: format.list(fields.map(fieldLabel), { type: "conjunction" }),
+    });
+  }
+
   function enterTokenAgain() {
     wizard.update({ setupToken: undefined });
     wizard.goTo("token");
@@ -85,7 +96,11 @@ export function AccountStep({ wizard }: StepProps) {
     }
     startTransition(async () => {
       const result = await createAdmin(validation.input);
-      if (result.ok) return;
+      if (result.ok) {
+        toast.success({ title: t("account.created.title"), message: t("account.created.detail") });
+        wizard.update({ setupToken: undefined, adminEmail: validation.input.email });
+        return wizard.next();
+      }
       const { errors: fieldErrors } = splitFieldErrors(result.fields);
       if (Object.keys(fieldErrors).length > 0) return showFieldErrors(fieldErrors);
       // A 400 without field errors of this form concerns the token or the body.
@@ -120,20 +135,18 @@ export function AccountStep({ wizard }: StepProps) {
         const { name } = target;
         setErrors((current) => (name in current ? { ...current, [name]: undefined } : current));
       }}
-      onBlur={(event) => {
-        const target: EventTarget = event.target;
-        if (target instanceof HTMLInputElement) validation.markLeft(target.name);
-      }}
     >
       <div className={styles.fields}>
         <div className={styles.fieldGrid}>
           {ACCOUNT_FIELDS.map((field) => {
-            const error = errors[field.name] ?? validation.visibleError(field.name);
+            const error = errors[field.name];
             return (
               <div key={field.name} className={field.wide ? styles.wide : undefined}>
                 <AccountField
                   field={field}
+                  rules={validation.rules}
                   error={error ? fieldErrorText(field.name, error) : undefined}
+                  reserve={field.serverErrors?.map((code) => fieldErrorText(field.name, { code }))}
                 />
               </div>
             );
@@ -152,13 +165,18 @@ export function AccountStep({ wizard }: StepProps) {
         >
           {isPending ? t("account.creating") : t("account.create")}
         </Button>
-        {validation.blocked ? (
-          <p id={SUBMIT_HINT_ID} className={styles.note}>
-            {t("account.blocked", {
-              fields: format.list(validation.incomplete.map(fieldLabel), { type: "conjunction" }),
-            })}
+        {/* The one live region of the form: it changes only when a field
+            becomes complete or incomplete, not on every keystroke. The
+            longest wording (every field missing) stays invisibly in the same
+            cell, so a shorter one never changes the height of the step. */}
+        <div className={styles.noteSlot}>
+          <p id={SUBMIT_HINT_ID} className={styles.note} aria-live="polite">
+            {validation.blocked ? blockedNote(validation.incomplete) : t("account.ready")}
           </p>
-        ) : null}
+          <p className={`${styles.note} ${styles.concealed}`} aria-hidden="true">
+            {blockedNote(ACCOUNT_FIELDS.map((field) => field.name))}
+          </p>
+        </div>
       </div>
     </form>
   );

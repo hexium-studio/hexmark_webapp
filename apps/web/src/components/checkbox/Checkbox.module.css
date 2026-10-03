@@ -1,0 +1,66 @@
+/* A checkbox inside its label (Checkbox.tsx): the whole row is the click
+   target, at least 44 px high and as wide as its text. Hover changes colours
+   only. */
+.label {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-self: start;
+  min-width: 0;
+  min-height: var(--control-min-size);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* The native checkbox drawn like the text fields: a 20 px box with the
+   control border on the card colour; checked, it fills with the primary
+   colour and shows a check mark in the button text colour (#09090b in both
+   themes, see --color-on-button). The focus ring is the fields' box-shadow
+   ring. */
+.checkbox {
+  flex: none;
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-xs);
+  background-color: var(--color-surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.label:hover .checkbox {
+  border-color: var(--color-accent-text);
+}
+
+.checkbox:checked {
+  border-color: var(--color-button);
+  background-color: var(--color-button);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2.75 7.25 5.75 10.25 11.25 3.75' fill='none' stroke='%2309090b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.label:hover .checkbox:checked {
+  border-color: var(--color-button-hover);
+  background-color: var(--color-button-hover);
+}
+
+.checkbox:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* Forced colours drop backgrounds and shadows: back to the system checkbox
+   with its own focus outline. */
+@media (forced-colors: active) {
+  .checkbox {
+    appearance: auto;
+  }
+
+  .checkbox:focus-visible {
+    outline: var(--focus-ring);
+  }
+}

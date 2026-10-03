@@ -1,38 +1,36 @@
 import { cookies, headers } from "next/headers";
 import { cache } from "react";
+import { currentSession } from "@/lib/session/current-session";
 import { matchAcceptLanguage } from "./accept-language";
 import { fetchInstanceDefaultLocale } from "./instance-locale";
 import { LOCALE_COOKIE } from "./locale-cookie";
+import { pickLocale } from "./locale-order";
 import { availableLocales, closestLocale, FALLBACK_LOCALE } from "./registry";
 
-// The UI language of the current request, first match wins:
-//   1. the signed-in user's saved locale (users.locale)
-//   2. the cookie set by a visible language picker
-//   3. the instance default locale (instance_settings, exists after setup)
-//   4. the browser's Accept-Language header
-//   5. English
+// The UI language of the current request; the order is in locale-order.ts.
 // Each source counts only with a locale the registry offers; a stored
 // regional code whose file is gone falls back to its language (de-CH -> de).
-// Later sources are not asked once one has answered (step 3 is an HTTP call).
-
-// Hook for step 1: once sign-in exists, return the signed-in user's locale
-// here (e.g. from the session). Until then nobody is signed in.
-async function savedUserLocale(): Promise<string | undefined> {
-  return undefined;
-}
 
 function available(code: string | undefined): string | undefined {
   return closestLocale(code)?.code;
 }
 
-export const resolveLocale = cache(async (): Promise<string> => {
-  const fromUser = available(await savedUserLocale());
-  if (fromUser) return fromUser;
-  const fromCookie = available((await cookies()).get(LOCALE_COOKIE)?.value);
-  if (fromCookie) return fromCookie;
-  const fromInstance = available(await fetchInstanceDefaultLocale());
-  if (fromInstance) return fromInstance;
-  const codes = availableLocales().map((locale) => locale.code);
-  const fromBrowser = matchAcceptLanguage((await headers()).get("accept-language"), codes);
-  return fromBrowser ?? FALLBACK_LOCALE;
-});
+export const resolveLocale = cache(
+  async (): Promise<string> =>
+    pickLocale(
+      {
+        // From the session the request proxy resolved (no extra API call).
+        user: async () => {
+          const session = await currentSession();
+          return available(session.state === "signed-in" ? session.user.locale : undefined);
+        },
+        cookie: async () => available((await cookies()).get(LOCALE_COOKIE)?.value),
+        browser: async () => {
+          const codes = availableLocales().map((locale) => locale.code);
+          return matchAcceptLanguage((await headers()).get("accept-language"), codes);
+        },
+        instance: async () => available(await fetchInstanceDefaultLocale()),
+      },
+      FALLBACK_LOCALE,
+    ),
+);

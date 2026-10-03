@@ -1,6 +1,7 @@
-// The cookie that stores the language picked in the UI before sign-in (the
-// language step of the setup wizard, the language switch). Read by the
-// request config (resolve-locale.ts), written by the setLocale action.
+// The cookie that stores the UI language outside a signed-in session. Set by
+// the setup wizard's language step (and the language switch of the setup
+// pages) and on sign-in to the account's locale, so the sign-in page shows
+// that language after signing out. Read by resolve-locale.ts.
 
 export const LOCALE_COOKIE = "hexmark_locale";
 
