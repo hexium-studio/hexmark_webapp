@@ -4,8 +4,12 @@ import { Hono } from "hono";
 import { api } from "./api";
 import { reportSetupTokenFormat, reportSetupTokenState } from "./api/setup/_lib/setup-token-report";
 import { env } from "./config/env";
+import { reportInstanceSecrets } from "./config/secrets";
+import { reportSessionConfig } from "./config/session";
+import { reportWebauthnConfig } from "./config/webauthn";
 import { startMigrations } from "./db/migrate";
 import { describeError } from "./lib/errors";
+import { warmUpPasswordVerification } from "./services/password";
 
 // Resolved from this entry file: src/index.ts under tsx (pnpm dev) and
 // dist/index.js in the tsup bundle both sit one level below the folder that
@@ -33,6 +37,10 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
 });
 
 reportSetupTokenFormat();
+reportSessionConfig();
+reportInstanceSecrets();
+reportWebauthnConfig();
+warmUpPasswordVerification();
 
 // The server listens even without a database so the setup wizard can report
 // its state (src/db/status.ts). Endpoints that use tables must check

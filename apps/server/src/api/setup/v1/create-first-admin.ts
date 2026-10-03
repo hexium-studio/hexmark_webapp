@@ -5,7 +5,8 @@ import { guardSetupRequest } from "../_lib/guard";
 import { pingDatabase } from "../_lib/setup-state";
 
 // POST /api/setup/v1/create-first-admin: creates the first admin account.
-// Guard failures as in _lib/guard.ts; then 201 created, 404 when another
+// Guard failures as in _lib/guard.ts; then 201 { ok: true, ticket: { token,
+// expiresAt } } (the setup enrolment ticket, see index.ts), 404 when another
 // request created a user first, 409 when e-mail or username is taken
 // (`fields: { <field>: { code: "taken" } }`).
 
@@ -20,8 +21,10 @@ export async function createFirstAdminAccount(c: Context): Promise<Response> {
     throw error;
   }
   switch (result.status) {
-    case "created":
-      return c.json({ ok: true }, 201);
+    case "created": {
+      const { token, expiresAt } = result.ticket;
+      return c.json({ ok: true, ticket: { token, expiresAt: expiresAt.toISOString() } }, 201);
+    }
     case "closed":
       return c.json({ error: "not_found" }, 404);
     case "conflict": {

@@ -24,6 +24,11 @@ export function zodValidationError(error: z.ZodError): ValidationErrorBody {
   return validationError(fieldErrorsFromZod(error));
 }
 
+// The parsed body is a JSON object (not an array, null or a primitive).
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // Parses the request body as JSON; undefined when it is not valid JSON.
 export async function readJsonBody(c: Context): Promise<unknown> {
   try {
@@ -31,4 +36,18 @@ export async function readJsonBody(c: Context): Promise<unknown> {
   } catch {
     return undefined;
   }
+}
+
+export type ParsedBody<T> = { ok: true; data: T } | { ok: false; response: Response };
+
+// Reads the JSON body and checks it against `schema`: the parsed value, or
+// the 400 response to send.
+export async function parseJsonBody<T>(c: Context, schema: z.ZodType<T>): Promise<ParsedBody<T>> {
+  const body = await readJsonBody(c);
+  if (!isJsonObject(body)) return { ok: false, response: c.json(invalidBodyError(), 400) };
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, response: c.json(zodValidationError(parsed.error), 400) };
+  }
+  return { ok: true, data: parsed.data };
 }

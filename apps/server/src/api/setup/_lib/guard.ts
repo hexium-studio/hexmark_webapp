@@ -1,25 +1,29 @@
 import type { Context } from "hono";
 import type { z } from "zod";
-import { clientAddress } from "../../../lib/client-address";
-import { invalidBodyError, readJsonBody, zodValidationError } from "../../../lib/validation";
+import { serverNotConfigured } from "../../../config/secrets";
+import {
+  invalidBodyError,
+  isJsonObject,
+  readJsonBody,
+  zodValidationError,
+} from "../../../lib/validation";
+import { clientAddress } from "../../../services/client-address";
 import { reserveSetupAttempt } from "./setup-attempts";
 import { isDatabaseMigrated, isSetupOpen } from "./setup-state";
 import { getSetupTokenState, matchesSetupToken } from "./setup-token";
 
 // Checks shared by every request that presents the setup token
 // (POST /api/setup/v1/verify-token and /api/setup/v1/create-first-admin), in
-// this order: rate limit (429), database ready (503), setup open (404), token
-// configured (503), body valid (400), token correct (401). Only a wrong token counts as a
-// failed attempt. "Setup open" is a snapshot here; creating the admin decides
+// this order: rate limit (429), server keys configured (503
+// server_not_configured, src/config/secrets.ts), database ready (503), setup
+// open (404), token configured (503), body valid (400), token correct (401).
+// Only a wrong token counts as a failed attempt. The keys are read once at
+// start-up, so checking them here holds for the whole request. "Setup open" is a snapshot here; creating the admin decides
 // it again under a lock (create-first-admin.ts).
 
 export type GuardResult<T> = { ok: true; data: T } | { ok: false; response: Response };
 
 type Outcome<T> = { data: T } | { response: Response; failedAttempt: boolean };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 async function evaluate<T extends { setupToken: string }>(
   c: Context,
@@ -27,6 +31,7 @@ async function evaluate<T extends { setupToken: string }>(
   body: unknown,
 ): Promise<Outcome<T>> {
   const refuse = (response: Response) => ({ response, failedAttempt: false });
+  if (serverNotConfigured()) return refuse(c.json({ error: "server_not_configured" }, 503));
   if (!isDatabaseMigrated()) return refuse(c.json({ error: "database_unavailable" }, 503));
   let open: boolean;
   try {
@@ -38,7 +43,7 @@ async function evaluate<T extends { setupToken: string }>(
   if (!getSetupTokenState().configured) {
     return refuse(c.json({ error: "setup_token_not_configured" }, 503));
   }
-  if (!isPlainObject(body)) {
+  if (!isJsonObject(body)) {
     return refuse(c.json(invalidBodyError(), 400));
   }
   const parsed = schema.safeParse(body);

@@ -20,3 +20,6 @@ export const PASSWORD_HASH_OPTIONS: Options = {
 
 // Largest accepted request body for the setup endpoints; the forms are tiny.
 export const SETUP_BODY_LIMIT_BYTES = 16 * 1024;
+
+// Largest accepted request body for the sign-in endpoints.
+export const AUTH_BODY_LIMIT_BYTES = 16 * 1024;
