@@ -51,7 +51,7 @@ test.describe("switching", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(stepHeading(page, "en", "language")).toBeVisible();
     await expect(
-      page.getByText(text("en", "setup.stepCounter", { current: 1, total: 4 })),
+      page.getByText(text("en", "setup.stepCounter", { current: 1, total: 6 })),
     ).toBeVisible();
     await expect(
       page.getByRole("status").filter({ hasText: "Language changed to English." }),

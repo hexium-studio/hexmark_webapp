@@ -82,3 +82,16 @@ export async function fillAccount(page: Page, locale: UiLocale, admin = ADMIN) {
 export function toasts(page: Page) {
   return page.locator("[data-toast-id]");
 }
+
+// Steps 5 and 6 after the admin was created: skips the second factor
+// (confirming the warning) and finishes with the preselected settings.
+export async function finishWithoutSecondFactor(page: Page, locale: UiLocale) {
+  await expect(stepHeading(page, locale, "twoFactor")).toBeVisible();
+  await page.getByRole("button", { name: text(locale, "setup.twoFactor.skip") }).click();
+  await page
+    .getByRole("button", { name: text(locale, "setup.twoFactor.skipConfirm.skip") })
+    .click();
+  await expect(stepHeading(page, locale, "settings")).toBeVisible();
+  await page.getByRole("button", { name: text(locale, "setup.settings.finish") }).click();
+  await expect(page).toHaveURL(/\/setup\/complete$/);
+}

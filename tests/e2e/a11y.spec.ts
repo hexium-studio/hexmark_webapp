@@ -13,7 +13,7 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     test("no axe violations in any step", async ({ page, stack }) => {
       const found: string[] = [];
-      await eachFlowState(page, "en", stack.token, async (state) => {
+      await eachFlowState(page, "en", stack, async (state) => {
         await settle(page);
         const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
         for (const violation of result.violations) {
@@ -31,7 +31,7 @@ test.describe("German texts", () => {
 
   test("no axe violations in any step", async ({ page, stack }) => {
     const found: string[] = [];
-    await eachFlowState(page, "de", stack.token, async (state) => {
+    await eachFlowState(page, "de", stack, async (state) => {
       await settle(page);
       const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       found.push(...result.violations.map((violation) => `${state}: ${violation.id}`));

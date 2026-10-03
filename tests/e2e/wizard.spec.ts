@@ -5,6 +5,7 @@ import {
   continueStep,
   createButton,
   fillAccount,
+  finishWithoutSecondFactor,
   openSetup,
   stepHeading,
   toAccountStep,
@@ -14,7 +15,8 @@ import {
 } from "./helpers/wizard";
 
 // The whole wizard, from the language step to /setup/complete, in English
-// and German, and what is true once setup is done.
+// and German, and what is true once setup is done. Steps 5 and 6 with a
+// second factor are in two-factor-setup.spec.ts; here they are skipped.
 
 for (const locale of ["en", "de"] as const satisfies UiLocale[]) {
   test.describe(`happy path (${locale})`, () => {
@@ -24,12 +26,15 @@ for (const locale of ["en", "de"] as const satisfies UiLocale[]) {
       await toAccountStep(page, locale, stack.token.toLowerCase());
       await fillAccount(page, locale);
       await createButton(page, locale).click();
+      const created = toasts(page).first();
+      await expect(created).toHaveAttribute("data-type", "success");
+      await expect(created).toContainText(text(locale, "setup.account.created.title"));
+      await finishWithoutSecondFactor(page, locale);
 
-      await expect(page).toHaveURL(/\/setup\/complete$/);
       const toast = toasts(page).first();
       await expect(toast).toBeVisible();
       await expect(toast).toHaveAttribute("data-type", "success");
-      await expect(toast).toContainText(text(locale, "flash.adminCreated.title"));
+      await expect(toast).toContainText(text(locale, "flash.setupSaved.title"));
       await expect(
         page.getByRole("heading", { level: 2, name: text(locale, "setupComplete.heading") }),
       ).toBeVisible();
@@ -45,7 +50,7 @@ for (const locale of ["en", "de"] as const satisfies UiLocale[]) {
 }
 
 test.describe("after setup", () => {
-  test("/setup answers 404 and visitors get the instance language", async ({
+  test("/setup answers 404; visitors get their browser language, else the instance one", async ({
     page,
     browser,
     stack,
@@ -61,16 +66,22 @@ test.describe("after setup", () => {
     await verifyButton(page, "de").click();
     await fillAccount(page, "de");
     await createButton(page, "de").click();
-    await expect(page).toHaveURL(/\/setup\/complete$/);
+    await finishWithoutSecondFactor(page, "de");
 
     const response = await page.goto("/setup");
     expect(response?.status()).toBe(404);
 
-    // A visitor without a language cookie whose browser prefers English.
-    const visitor = await browser.newContext({ locale: "en-US" });
-    const other = await visitor.newPage();
-    await other.goto(`${stack.webUrl}/setup/complete`);
-    await expect(other.locator("html")).toHaveAttribute("lang", "de");
-    await visitor.close();
+    // Visitors without a language cookie: a browser language the instance
+    // offers wins over the instance default, any other gets the default.
+    for (const [browserLocale, expected] of [
+      ["en-US", "en"],
+      ["fr-FR", "de"],
+    ] as const) {
+      const visitor = await browser.newContext({ locale: browserLocale });
+      const other = await visitor.newPage();
+      await other.goto(`${stack.webUrl}/setup/complete`);
+      await expect(other.locator("html")).toHaveAttribute("lang", expected);
+      await visitor.close();
+    }
   });
 });

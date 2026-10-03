@@ -2,6 +2,7 @@ import { test as base, expect } from "@playwright/test";
 import { createDatabase, resetSetupData, type TestDatabase } from "../support/databases";
 import {
   type HexmarkServer,
+  type ServerOptions,
   startHexmarkServer,
   TEST_SETUP_TOKEN,
 } from "../support/hexmark-server";
@@ -17,9 +18,16 @@ import { PG_ENV } from "./global-setup";
 export interface Stack {
   db: TestDatabase;
   webUrl: string;
+  // The worker's API server; it keeps its port across restarts.
+  serverUrl: string;
   token: string;
   reset(): Promise<void>;
+  // Restarts the API server on the same port with other settings, e.g.
+  // without SETUP_TOKEN or with SESSION_* durations; the data stays.
+  restartServer(options?: StackServerOptions): Promise<void>;
 }
+
+export type StackServerOptions = Pick<ServerOptions, "setupToken" | "env">;
 
 interface WorkerFixtures {
   stack: Stack;
@@ -41,8 +49,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     // biome-ignore lint/correctness/noEmptyPattern: Playwright requires an object pattern
     async ({}, use) => {
       const db = await createDatabase(pgServer(), "e2e");
-      const start = (port?: number) =>
-        startHexmarkServer({ mode: "dist", database: { server: db.server, name: db.name }, port });
+      const start = (port?: number, options: StackServerOptions = {}) =>
+        startHexmarkServer({
+          mode: "dist",
+          database: { server: db.server, name: db.name },
+          port,
+          ...options,
+        });
       let server: HexmarkServer = await start();
       let web: WebServer | undefined;
       try {
@@ -50,11 +63,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         await use({
           db,
           webUrl: web.url,
+          serverUrl: server.url,
           token: TEST_SETUP_TOKEN,
           async reset() {
             await server.stop();
             await resetSetupData(db);
             server = await start(server.port);
+          },
+          async restartServer(options) {
+            await server.stop();
+            server = await start(server.port, options);
           },
         });
       } finally {

@@ -89,6 +89,12 @@ export async function startPostgres(purpose: string): Promise<StartedPg> {
     POSTGRES_IMAGE,
     // Durability is pointless for throwaway data; this makes tests faster.
     ...["-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"],
+    // Integration test files run in parallel, each with API server processes
+    // of its own (a pool of up to 10 connections each) plus test clients:
+    // a full run reaches ~90 connections, the default limit is 100. Beyond
+    // it, servers and queries are refused ("too many clients") and many
+    // tests of one run fail at once.
+    ...["-c", "max_connections=300"],
   ];
   const proc: ManagedProcess = startProcess({
     name: `postgres-${purpose}`,

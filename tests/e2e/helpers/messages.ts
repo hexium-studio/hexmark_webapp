@@ -29,12 +29,34 @@ export function text(locale: UiLocale, key: string, values: Record<string, strin
   let node: string | Tree | undefined = load(locale);
   for (const part of key.split(".")) node = typeof node === "object" ? node[part] : undefined;
   if (typeof node !== "string") throw new Error(`no message ${locale}:${key}`);
-  return fill(node, values);
+  return fill(node, values, locale);
 }
 
-// Simple placeholders only ({name}); enough for the texts the tests use.
-export function fill(message: string, values: Record<string, string | number>): string {
-  return message.replace(/\{(\w+)\}/g, (all, name: string) =>
+// Simple placeholders ({name}) and plurals without nesting
+// ({count, plural, =0 {...} one {# ...} other {# ...}}); enough for the
+// texts the tests use.
+export function fill(
+  message: string,
+  values: Record<string, string | number>,
+  locale: UiLocale = "en",
+): string {
+  const plurals = message.replace(
+    /\{(\w+), plural,((?:\s*(?:=\d+|\w+) \{[^{}]*\})+)\s*\}/g,
+    (all, name: string, branches: string) => {
+      if (!(name in values)) return all;
+      const value = Number(values[name]);
+      const options = new Map(
+        [...branches.matchAll(/(=\d+|\w+) \{([^{}]*)\}/g)].map((m) => [m[1], m[2] ?? ""]),
+      );
+      const chosen =
+        options.get(`=${value}`) ??
+        options.get(new Intl.PluralRules(locale).select(value)) ??
+        options.get("other") ??
+        all;
+      return chosen.replaceAll("#", String(value));
+    },
+  );
+  return plurals.replace(/\{(\w+)\}/g, (all, name: string) =>
     name in values ? String(values[name]) : all,
   );
 }

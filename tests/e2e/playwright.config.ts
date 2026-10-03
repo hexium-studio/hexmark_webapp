@@ -19,6 +19,8 @@ export default defineConfig({
   fullyParallel: true,
   workers: process.env.CI ? 2 : 3,
   forbidOnly: !!process.env.CI,
+  // No retries, in CI either: a failure is a bug to find, not to hide as
+  // "flaky" (tests/README.md, "No retries").
   retries: 0,
   timeout: 90_000,
   expect: { timeout: 10_000 },

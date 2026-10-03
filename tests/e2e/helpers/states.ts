@@ -1,6 +1,9 @@
 import { expect, type Page } from "@playwright/test";
-import type { UiLocale } from "./messages";
+import type { Stack } from "../fixtures";
+import { text, type UiLocale } from "./messages";
+import { acceptTakenValues, rejectTakenValues, TAKEN_USERNAME } from "./taken";
 import {
+  ADMIN,
   accountField,
   continueStep,
   createButton,
@@ -23,15 +26,21 @@ export type FlowState =
   | "connection"
   | "token"
   | "token-wrong"
-  | "account-errors"
+  | "account-rules"
+  | "account-taken"
+  | "two-factor"
+  | "two-factor-app"
+  | "two-factor-skip"
+  | "settings"
   | "complete";
 
 export async function eachFlowState(
   page: Page,
   locale: UiLocale,
-  token: string,
+  stack: Stack,
   visit: (state: FlowState) => Promise<void>,
 ) {
+  const { token } = stack;
   await openSetup(page, locale);
   await visit("language");
   await continueStep(page, locale, "connection");
@@ -51,6 +60,7 @@ export async function eachFlowState(
   await page.keyboard.type(token);
   await verifyButton(page, locale).click();
   await expect(stepHeading(page, locale, "account")).toBeVisible();
+  // Some rules met, some not; leaving the fields shows no errors.
   for (const [field, value] of [
     ["displayName", " "],
     ["username", "a"],
@@ -61,11 +71,40 @@ export async function eachFlowState(
     await accountField(page, locale, field).fill(value);
     await accountField(page, locale, field).blur();
   }
-  await expect(accountField(page, locale, "username")).toHaveAttribute("aria-invalid", "true");
-  await visit("account-errors");
+  await expect(page.locator("li[data-met]")).toHaveCount(1);
+  await visit("account-rules");
+
+  // The server refuses the username: the one red state of the form.
+  await rejectTakenValues(stack.db);
+  try {
+    await fillAccount(page, locale, { ...ADMIN, username: TAKEN_USERNAME });
+    await createButton(page, locale).click();
+    await expect(page.getByText(text(locale, "errors.fields.username.taken"))).toBeVisible();
+    await visit("account-taken");
+  } finally {
+    await acceptTakenValues(stack.db);
+  }
 
   await fillAccount(page, locale);
   await createButton(page, locale).click();
+  await expect(stepHeading(page, locale, "twoFactor")).toBeVisible();
+  await expect(toasts(page).first()).toBeVisible();
+  await visit("two-factor");
+  // In narrow windows the toast covers the buttons; close it like a user would.
+  await toasts(page).first().getByRole("button").last().click();
+  await expect(toasts(page)).toHaveCount(0);
+  await page.getByRole("button", { name: text(locale, "setup.twoFactor.app.start") }).click();
+  await expect(page.locator("#setup-totp-key")).not.toHaveText(/X{4}/);
+  await visit("two-factor-app");
+  await page.getByRole("button", { name: text(locale, "twoFactor.totp.cancel") }).click();
+  await page.getByRole("button", { name: text(locale, "setup.twoFactor.skip") }).click();
+  await visit("two-factor-skip");
+  await page
+    .getByRole("button", { name: text(locale, "setup.twoFactor.skipConfirm.skip") })
+    .click();
+  await expect(stepHeading(page, locale, "settings")).toBeVisible();
+  await visit("settings");
+  await page.getByRole("button", { name: text(locale, "setup.settings.finish") }).click();
   await expect(page).toHaveURL(/\/setup\/complete$/);
   await expect(toasts(page).first()).toBeVisible();
   await visit("complete");

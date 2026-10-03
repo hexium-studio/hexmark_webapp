@@ -140,9 +140,12 @@ describe("setupStatusSchema", () => {
       setupOpen: true,
       setupTokenPresent: true,
       setupTokenConfigured: false,
+      secretsConfigured: true,
       database: { reachable: true, migrated: false },
     };
     expect(setupStatusSchema.parse(status)).toEqual(status);
+    const { secretsConfigured: _, ...withoutSecrets } = status;
+    expect(setupStatusSchema.safeParse(withoutSecrets).success).toBe(false);
     expect(setupStatusSchema.safeParse({ setupOpen: true }).success).toBe(false);
   });
 });

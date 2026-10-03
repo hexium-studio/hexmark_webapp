@@ -22,6 +22,7 @@ describe("GET /api/setup/v1/status", () => {
         setupOpen: true,
         setupTokenPresent: true,
         setupTokenConfigured: true,
+        secretsConfigured: true,
         database: { reachable: true, migrated: true },
       },
     });
@@ -71,6 +72,7 @@ describe("GET /api/setup/v1/status", () => {
         error: "database_unavailable",
         database: { reachable: false, migrated: false },
         setupTokenConfigured: true,
+        secretsConfigured: true,
       },
     });
   });

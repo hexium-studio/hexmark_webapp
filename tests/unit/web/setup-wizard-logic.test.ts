@@ -99,18 +99,33 @@ describe("connectionChecks", () => {
       setupOpen: true,
       setupTokenPresent: true,
       setupTokenConfigured: true,
+      secretsConfigured: true,
       database: { reachable: true, migrated: true },
     },
   };
   const states = (status: Parameters<typeof connectionChecks>[0]) =>
     connectionChecks(status).map((check) => `${check.id}:${check.state}:${check.detail}`);
 
-  it("passes everything when server, database and token are ready", () => {
+  it("passes everything when server, database, keys and token are ready", () => {
     expect(states(ok)).toEqual([
       "server:pass:serverPass",
       "database:pass:databasePass",
+      "config:pass:configPass",
       "token:pass:tokenPass",
     ]);
+  });
+
+  it("reports missing or invalid keys in .env, also while the database is down", () => {
+    expect(states({ ...ok, status: { ...ok.status, secretsConfigured: false } })[2]).toBe(
+      "config:fail:configMissing",
+    );
+    const down = {
+      kind: "database_unavailable" as const,
+      setupTokenConfigured: true,
+      database: { reachable: false, migrated: false },
+    };
+    expect(states({ ...down, secretsConfigured: false })[2]).toBe("config:fail:configMissing");
+    expect(states({ ...down, secretsConfigured: true })[2]).toBe("config:pass:configPass");
   });
 
   it("explains a missing or invalid token", () => {
@@ -119,14 +134,15 @@ describe("connectionChecks", () => {
       status: { ...ok.status, setupTokenPresent: false, setupTokenConfigured: false },
     };
     const invalid = { ...ok, status: { ...ok.status, setupTokenConfigured: false } };
-    expect(states(missing)[2]).toBe("token:fail:tokenMissing");
-    expect(states(invalid)[2]).toBe("token:fail:tokenInvalid");
+    expect(states(missing)[3]).toBe("token:fail:tokenMissing");
+    expect(states(invalid)[3]).toBe("token:fail:tokenInvalid");
   });
 
   it("does not check further when the server does not answer", () => {
     expect(states({ kind: "server_unreachable" })).toEqual([
       "server:fail:serverUnreachable",
       "database:unknown:notChecked",
+      "config:unknown:notChecked",
       "token:unknown:notChecked",
     ]);
     expect(connectionChecks({ kind: "unexpected_response", httpStatus: 502 })[0]?.values).toEqual({
@@ -135,7 +151,11 @@ describe("connectionChecks", () => {
   });
 
   it("tells an unreachable database from one without tables", () => {
-    const down = { kind: "database_unavailable" as const, setupTokenConfigured: true };
+    const down = {
+      kind: "database_unavailable" as const,
+      setupTokenConfigured: true,
+      secretsConfigured: true,
+    };
     expect(states({ ...down, database: { reachable: false, migrated: false } })[1]).toBe(
       "database:fail:databaseUnreachable",
     );
@@ -147,7 +167,7 @@ describe("connectionChecks", () => {
         ...down,
         setupTokenConfigured: false,
         database: { reachable: true, migrated: true },
-      })[2],
+      })[3],
     ).toBe("token:fail:tokenUnknown");
   });
 });

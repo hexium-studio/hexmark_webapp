@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { TEST_INTERNAL_API_KEY } from "./hexmark-server";
 import { ARTIFACTS_DIR, WEB_STANDALONE_DIR, WEB_STATIC_DIR } from "./paths";
 import { cleanEnv, freePort, type ManagedProcess, startProcess, waitFor } from "./processes";
 
@@ -31,7 +32,12 @@ export function emptyLocalesDir(): string {
   return dir;
 }
 
-export async function startWebServer(serverUrl: string): Promise<WebServer> {
+// `env`: further variables, e.g. TRUSTED_PROXIES, or INTERNAL_API_KEY: ""
+// for a web server that cannot forward client addresses.
+export async function startWebServer(
+  serverUrl: string,
+  env: Record<string, string> = {},
+): Promise<WebServer> {
   const port = await freePort();
   const proc = startProcess({
     name: `web-${port}`,
@@ -45,6 +51,8 @@ export async function startWebServer(serverUrl: string): Promise<WebServer> {
       HOSTNAME: "127.0.0.1",
       SERVER_INTERNAL_URL: serverUrl,
       HEXMARK_LOCALES_DIR: emptyLocalesDir(),
+      INTERNAL_API_KEY: TEST_INTERNAL_API_KEY,
+      ...env,
     }),
   });
   const url = `http://127.0.0.1:${port}`;

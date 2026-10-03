@@ -10,6 +10,12 @@ import { cleanEnv, freePort, type ManagedProcess, startProcess, waitFor } from "
 // Valid token used by the tests (8 characters, A-Z and 0-9).
 export const TEST_SETUP_TOKEN = "TEST2345";
 
+// Instance keys of the test servers (32 bytes, base64url), fixed so that a
+// web server started separately can present the same INTERNAL_API_KEY.
+// Pass `env: { INTERNAL_API_KEY: "" }` to start a server without one.
+export const TEST_INTERNAL_API_KEY = Buffer.alloc(32, 0x11).toString("base64url");
+export const TEST_ENCRYPTION_KEY = Buffer.alloc(32, 0x22).toString("base64url");
+
 export interface ServerOptions {
   // "source" runs src/index.ts through tsx (no build needed); "dist" runs
   // the production bundle from `pnpm build`.
@@ -22,6 +28,8 @@ export interface ServerOptions {
   // Wait until migrations are applied (GET /api/setup/v1/status answers 200).
   waitForDatabase?: boolean;
   port?: number;
+  // Further environment variables (e.g. SESSION_IDLE_TIMEOUT).
+  env?: Record<string, string>;
 }
 
 export interface HexmarkServer {
@@ -55,6 +63,9 @@ export async function startHexmarkServer(options: ServerOptions): Promise<Hexmar
     PORT: String(port),
     ...databaseEnv(options),
     ...(token === null ? {} : { SETUP_TOKEN: token }),
+    INTERNAL_API_KEY: TEST_INTERNAL_API_KEY,
+    ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
+    ...options.env,
   });
   // tsx is loaded as an import hook; Node resolves it from the working
   // directory, apps/server, where it is installed.

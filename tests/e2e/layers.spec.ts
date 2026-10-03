@@ -57,23 +57,48 @@ for (const colorScheme of ["light", "dark"] as const) {
         await page.keyboard.press("Tab");
         await page.keyboard.type("bad@");
         await page.keyboard.press("Tab");
-        await until(page, "document.querySelectorAll('[aria-invalid=true]').length >= 2");
-        await check("account, field errors");
+        await until(page, "document.querySelectorAll('li[data-met]').length === 1");
+        await check("account, rules partly met");
 
+        // Each field's whole value, typed over what it holds (select all).
+        // Not End to reach the end of the text: with the caret there already,
+        // Chrome passes the key on to the page, which starts a smooth scroll
+        // to the bottom, and the next click lands where the field has
+        // already scrolled away from.
         for (const [id, value] of [
           ["#account-displayName", "Ada"],
-          ["#account-username", "da"],
-          ["#account-email", "example.com"],
+          ["#account-username", "ada"],
+          ["#account-email", "bad@example.com"],
           ["#account-password", "correct horse battery"],
           ["#account-passwordConfirm", "correct horse battery"],
         ]) {
           await clickAt(page, id as string);
-          await page.keyboard.press("End");
+          await page.keyboard.press("ControlOrMeta+A");
           await page.keyboard.type(value as string);
         }
         await page.keyboard.press("Enter");
+        await until(page, "!!document.querySelector('main section section')");
+        // The "Admin account created" toast is an accepted exception. It
+        // pauses under the mouse, which may rest where it appears.
+        await blank();
+        await until(page, "!document.querySelector('[data-toast-id]')", 20_000);
+        await check("two-factor step");
+
+        await clickAt(page, "main section button", "Set up authenticator app");
+        await until(page, "!!document.querySelector('main svg[role=img]')");
+        await check("two-factor, app set-up with QR code");
+        await clickAt(page, "main section button", "Cancel");
+        await clickAt(page, "main section button", "Skip for now");
+        await until(page, "!!document.querySelector('main [role=alert]')");
+        await check("two-factor, skip confirmation");
+        await clickAt(page, "main section button", "Skip anyway");
+        await until(page, "!!document.querySelector('#settings-timezone')");
+        await check("settings");
+
+        await clickAt(page, "main section button[type=submit]");
         await until(page, "location.pathname === '/setup/complete'");
         // The success toast is an accepted exception while it is shown.
+        await blank();
         await until(page, "!document.querySelector('[data-toast-id]')", 20_000);
         await check("complete, toast gone");
 

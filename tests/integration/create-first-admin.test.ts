@@ -81,7 +81,10 @@ describe("creating the admin", () => {
       setupToken: " test2345 ",
       locale: "pt-BR",
     });
-    expect(await postJson(server, PATH, input)).toEqual({ status: 201, body: { ok: true } });
+    expect(await postJson(server, PATH, input)).toEqual({
+      status: 201,
+      body: { ok: true, ticket: { token: expect.any(String), expiresAt: expect.any(String) } },
+    });
 
     const users = await db.sql`select * from users`;
     expect(users).toHaveLength(1);

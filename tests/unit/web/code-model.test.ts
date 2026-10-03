@@ -103,9 +103,11 @@ describe("keyCommand (navigation and deletion)", () => {
     expect(key(full, 0, "Delete")).toEqual({ code: cells("_BCD1234") });
   });
 
-  it("typing the character a revealed cell shows moves on", () => {
-    expect(key(full, 2, "c", false)).toEqual({ focus: 3 });
-    expect(key(full, 7, "4", false)).toEqual({ focus: 7 });
+  it("typing the character a revealed cell shows moves on and counts as a change", () => {
+    expect(key(full, 2, "c", false)).toEqual({ code: [...full], focus: 3 });
+    expect(key(full, 7, "4", false)).toEqual({ code: [...full], focus: 7 });
+    // A copy: the caller sees a new value, as after any other typed character.
+    expect(key(full, 2, "c", false)?.code).not.toBe(full);
   });
 
   it("leaves other keys and masked cells to the browser", () => {
