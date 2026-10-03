@@ -1,0 +1,236 @@
+/* Toasts: 380 px wide, 10 px radius, 1 px
+   border, icon and title in the type colour on the type tint, text in
+   --color-text, 44 x 44 px close button, a 3 px progress bar at the bottom
+   on a track of the type colour at 25 %. 12 px between toasts, 24 px from
+   the window edges; no accent stripe.
+   No enter/leave animation (no opacity or transform on a layer); the bar
+   animates its inline size, which repaints but never adds a layer.
+   Lowest measured contrasts, all four types in both themes (re-measure
+   when a status token changes): type-coloured text on its tint 5.47 (dark
+   info) / 5.91 (light error), body text 16.8, icon 5.47, close x 6.83,
+   border against page and card 6.02, bar against its track 3.71 (dark
+   info), focus ring on a tint 5.04. */
+
+.stack {
+  position: fixed;
+  z-index: 100;
+  inset-block-end: max(var(--space-5), env(safe-area-inset-bottom));
+  inset-inline-end: var(--space-5);
+  inline-size: min(23.75rem, calc(100vw - 2 * var(--space-5)));
+  max-block-size: calc(100dvh - 2 * var(--space-5));
+  /* Only the newest toast can be taller than this (Toaster.tsx drops the
+     rest); it scrolls rather than being cut off. */
+  overflow-y: auto;
+  /* The toasts adapt their layout to the stack width (see the end). */
+  container: toast-stack / inline-size;
+}
+
+/* Narrow windows: across the full width, with side margins. */
+@media (max-width: 30rem) {
+  .stack {
+    inset-inline: var(--space-4);
+    inset-block-end: max(var(--space-4), env(safe-area-inset-bottom));
+    inline-size: auto;
+    max-block-size: calc(100dvh - 2 * var(--space-4));
+  }
+}
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toast {
+  --toast-color: var(--color-accent-text-strong);
+  --toast-tint: var(--color-info-tint);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) var(--control-min-size);
+  grid-template-areas:
+    "icon title close"
+    ". content close";
+  gap: var(--space-0-5) var(--space-3);
+  align-items: start;
+  padding-block: var(--space-4) calc(var(--space-4) + 3px);
+  padding-inline: var(--space-4-5) var(--space-1);
+  border: 1px solid var(--toast-color);
+  border-radius: var(--radius-lg);
+  background: var(--toast-tint);
+  color: var(--color-text);
+  /* Keeps the bar inside the rounded corners. */
+  overflow: hidden;
+}
+
+.toast[data-type="success"] {
+  --toast-color: var(--color-success);
+  --toast-tint: var(--color-success-tint);
+}
+
+.toast[data-type="warning"] {
+  --toast-color: var(--color-warning);
+  --toast-tint: var(--color-warning-tint);
+}
+
+.toast[data-type="error"] {
+  --toast-color: var(--color-danger);
+  --toast-tint: var(--color-danger-tint);
+}
+
+.icon {
+  grid-area: icon;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-block-start: 0.0625rem;
+  color: var(--toast-color);
+}
+
+.content {
+  grid-area: content;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.title,
+.message {
+  margin: 0;
+}
+
+.title {
+  grid-area: title;
+  color: var(--toast-color);
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.count {
+  margin-inline-start: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.action {
+  justify-self: start;
+  max-inline-size: 100%;
+  min-block-size: var(--control-min-size);
+  margin-block-start: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--toast-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--toast-color);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.action:hover {
+  background: var(--color-surface);
+}
+
+/* Top corner, 44 x 44 px; pulled up into the padding so the x lines up with
+   the title. The ring is drawn inside: the toast clips at its border. */
+.close {
+  grid-area: close;
+  display: grid;
+  place-items: center;
+  inline-size: var(--control-min-size);
+  block-size: var(--control-min-size);
+  margin-block-start: calc(var(--space-3) * -1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+
+.close:hover {
+  color: var(--color-text);
+}
+
+.action:focus-visible,
+.close:focus-visible {
+  outline-offset: -2px;
+}
+
+.closeIcon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.track {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 3px;
+  background: color-mix(in srgb, var(--toast-color) 25%, var(--toast-tint));
+}
+
+/* Runs from full to empty over the toast's time; `animationend` closes the
+   toast (ToastItem.tsx). Without fill mode: at the end it falls back to 0. */
+.bar {
+  inline-size: 0;
+  block-size: 100%;
+  background: var(--toast-color);
+  animation: countdown var(--toast-duration) linear;
+}
+
+/* Hover or keyboard focus stops the time (WCAG 2.2.1). */
+.toast:hover .bar,
+.toast:focus-within .bar {
+  animation-play-state: paused;
+}
+
+@keyframes countdown {
+  from {
+    inline-size: 100%;
+  }
+
+  to {
+    inline-size: 0;
+  }
+}
+
+/* The global reduced-motion rule shortens every animation to nothing, which
+   would close toasts at once. The bar keeps its time and moves in one step
+   per second instead of gliding. */
+/* biome-ignore-start lint/complexity/noImportantStyles: must win over the global reduced-motion rule */
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation-duration: var(--toast-duration) !important;
+    animation-timing-function: steps(var(--toast-steps), end) !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: must win over the global reduced-motion rule */
+
+/* A very narrow stack (small phone with large text): icon and close button
+   share the first row, title and text get the full width below. */
+@container toast-stack (max-width: 15rem) {
+  .toast {
+    grid-template-areas:
+      "icon . close"
+      "title title title"
+      "content content content";
+  }
+
+  /* Same distance from the edge as on the icon side; the close button keeps
+     the toast's narrow end padding. */
+  .title,
+  .content {
+    margin-inline-end: calc(var(--space-4-5) - var(--space-1));
+  }
+}
