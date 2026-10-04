@@ -3,18 +3,19 @@ import { isRecord } from "@/lib/api-fields";
 import { callServer } from "@/lib/server-api";
 import { sessionAuthorization } from "@/lib/session/session-authorization";
 import { loadAccountSecurity } from "@/lib/two-factor/account-security";
-import { type FolderChoice, readFolderChoices } from "./folders";
 import { readTokenInfo } from "./token-result";
+import { type PickerTree, readPickerTree } from "./tree";
 
 // Everything the token page shows, for the signed-in user of the current
-// request: the tokens, the folders a new one can be limited to, the
-// account's time zone and until when the password confirmation lasts.
+// request: the tokens, the folders and notes a token's targets are picked
+// from, the account's time zone and until when the password confirmation
+// lasts.
 // Server code only.
 
 export interface TokensPageData {
   // Revoked tokens are left out: they can do nothing any more.
   tokens: ApiTokenInfo[];
-  folders: FolderChoice[];
+  tree: PickerTree;
   timezone: string;
   reauthenticatedUntil: string | null;
 }
@@ -46,13 +47,13 @@ export async function loadTokensPage(): Promise<TokensPageResult> {
   }
   const raw = isRecord(list.body) && Array.isArray(list.body.tokens) ? list.body.tokens : null;
   const tokens = raw?.map(readTokenInfo);
-  const folders = readFolderChoices(tree.body);
-  if (!tokens || tokens.some((token) => !token) || !folders) return { kind: "unavailable" };
+  const picker = readPickerTree(tree.body);
+  if (!tokens || tokens.some((token) => !token) || !picker) return { kind: "unavailable" };
   return {
     kind: "ok",
     data: {
       tokens: (tokens as ApiTokenInfo[]).filter((token) => token.revokedAt === null),
-      folders,
+      tree: picker,
       timezone: security.security.timezone,
       reauthenticatedUntil: security.security.reauthenticatedUntil,
     },

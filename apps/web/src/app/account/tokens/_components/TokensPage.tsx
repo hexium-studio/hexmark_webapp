@@ -9,8 +9,9 @@ import { FormAlert } from "@/components/form-alert/FormAlert";
 import { toast } from "@/components/toast/toast-store";
 import type { TokensPageData } from "@/lib/api-tokens/load";
 import { CreatedToken } from "./CreatedToken";
-import { CreateTokenForm } from "./CreateTokenForm";
+
 import { RevokeDialog } from "./RevokeDialog";
+import { TokenForm } from "./TokenForm";
 import { TokenList } from "./TokenList";
 import styles from "./Tokens.module.css";
 
@@ -29,7 +30,8 @@ interface Created {
 
 // The token page: the list (revoke with a confirmation), the create form
 // and, right after creating, the one-time view of the new token's MCP
-// configuration in place of the rest. The token lives only in this
+// configuration in place of the rest; changing a token's access shows its
+// form in place of the list. The token lives only in this
 // component's state: "Done", leaving or reloading the page drops it, and
 // nothing can fetch it again.
 export function TokensPage({ user, data }: TokensPageProps) {
@@ -37,6 +39,11 @@ export function TokensPage({ user, data }: TokensPageProps) {
   const router = useRouter();
   const [created, setCreated] = useState<Created | null>(null);
   const [revoking, setRevoking] = useState<ApiTokenInfo | null>(null);
+  const [editing, setEditing] = useState<ApiTokenInfo | null>(null);
+  const backToList = () => {
+    setEditing(null);
+    requestAnimationFrame(() => document.getElementById(TITLE_ID)?.focus());
+  };
   const [confirmedUntil, setConfirmedUntil] = useState<string | null>(null);
 
   const links = (
@@ -72,12 +79,34 @@ export function TokensPage({ user, data }: TokensPageProps) {
             requestAnimationFrame(() => document.getElementById(TITLE_ID)?.focus());
           }}
         />
+      ) : editing ? (
+        <TokenForm
+          key={editing.id}
+          role={user.role}
+          token={editing}
+          tree={data.tree}
+          timeZone={data.timezone}
+          reauthenticatedUntil={confirmedUntil ?? data.reauthenticatedUntil}
+          onReauthenticated={setConfirmedUntil}
+          onCancel={backToList}
+          onUpdated={() => {
+            toast.success({ title: t("done.updated") });
+            backToList();
+            router.refresh();
+          }}
+        />
       ) : (
         <>
-          <TokenList tokens={data.tokens} timeZone={data.timezone} onRevoke={setRevoking} />
-          <CreateTokenForm
+          <TokenList
+            tokens={data.tokens}
+            timeZone={data.timezone}
+            onEdit={setEditing}
+            onRevoke={setRevoking}
+          />
+          <TokenForm
             role={user.role}
-            folders={data.folders}
+            tree={data.tree}
+            timeZone={data.timezone}
             reauthenticatedUntil={confirmedUntil ?? data.reauthenticatedUntil}
             onReauthenticated={setConfirmedUntil}
             onCreated={(info, config) => {

@@ -51,6 +51,9 @@ export function Home({ user, twoFactorMissing }: HomeProps) {
         <ButtonLink variant="secondary" href="/account/tokens">
           {t("tokensLink")}
         </ButtonLink>
+        <ButtonLink variant="secondary" href="/locked">
+          {t("lockedLink")}
+        </ButtonLink>
         <SignOutButton />
       </div>
     </CardShell>

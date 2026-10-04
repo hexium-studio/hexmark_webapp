@@ -17,6 +17,7 @@ export type Messages = {
   formAlert: typeof import("../../../messages/en/formAlert.json");
   home: typeof import("../../../messages/en/home.json");
   languageSwitch: typeof import("../../../messages/en/languageSwitch.json");
+  locked: typeof import("../../../messages/en/locked.json");
   roles: typeof import("../../../messages/en/roles.json");
   secondFactor: typeof import("../../../messages/en/secondFactor.json");
   setup: typeof import("../../../messages/en/setup.json");

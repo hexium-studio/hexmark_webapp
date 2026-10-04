@@ -14,12 +14,14 @@ const PASSWORD_ID = "reauth-password";
 
 export interface ReauthDialogProps {
   open: boolean;
+  // What the confirmation is for: creating a token or changing one.
+  purpose: "create" | "update";
   onClose(): void;
   // The password was confirmed until `until`; the caller creates the token.
   onConfirmed(until: string): void;
 }
 
-// Asks for the password before a token is created, with the same
+// Asks for the password before a token is created or changed, with the same
 // confirmation the account security page uses (valid for 10 minutes). A
 // wrong password is an error at the field; other refusals close the dialog
 // and become a toast.
@@ -31,7 +33,7 @@ export function ReauthDialog(props: ReauthDialogProps) {
   );
 }
 
-function DialogBody({ onClose, onConfirmed }: ReauthDialogProps) {
+function DialogBody({ purpose, onClose, onConfirmed }: ReauthDialogProps) {
   const t = useTranslations("tokens.confirm");
   const showError = useTokenToast();
   const [error, setError] = useState<string>();
@@ -64,7 +66,7 @@ function DialogBody({ onClose, onConfirmed }: ReauthDialogProps) {
       <h2 id={TITLE_ID} className={styles.dialogTitle}>
         {t("title")}
       </h2>
-      <p className={styles.muted}>{t("detail")}</p>
+      <p className={styles.muted}>{purpose === "update" ? t("detailUpdate") : t("detail")}</p>
       <PasswordField
         id={PASSWORD_ID}
         name="password"
@@ -78,7 +80,7 @@ function DialogBody({ onClose, onConfirmed }: ReauthDialogProps) {
       />
       <div className={styles.dialogActions}>
         <Button type="submit" pending={isPending}>
-          {isPending ? t("working") : t("submit")}
+          {isPending ? t("working") : purpose === "update" ? t("submitUpdate") : t("submit")}
         </Button>
         <Button variant="secondary" onClick={onClose}>
           {t("cancel")}

@@ -10,12 +10,13 @@ const HEADING_ID = "tokens-list";
 export interface TokenListProps {
   tokens: ApiTokenInfo[];
   timeZone: string;
+  onEdit(token: ApiTokenInfo): void;
   onRevoke(token: ApiTokenInfo): void;
 }
 
 // The account's tokens that are not revoked, newest first (as the server
 // lists them), each as a framed row.
-export function TokenList({ tokens, timeZone, onRevoke }: TokenListProps) {
+export function TokenList({ tokens, timeZone, onEdit, onRevoke }: TokenListProps) {
   const t = useTranslations("tokens.list");
   return (
     <section className={styles.section} aria-labelledby={HEADING_ID}>
@@ -34,6 +35,7 @@ export function TokenList({ tokens, timeZone, onRevoke }: TokenListProps) {
               key={token.id}
               token={token}
               timeZone={timeZone}
+              onEdit={() => onEdit(token)}
               onRevoke={() => onRevoke(token)}
             />
           ))}

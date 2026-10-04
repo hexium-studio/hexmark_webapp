@@ -14,6 +14,7 @@
   },
   "securityLink": "Sicherheitseinstellungen",
   "tokensLink": "API-Tokens",
+  "lockedLink": "Gesperrt und verborgen",
   "twoFactorMissing": {
     "title": "Zwei-Faktor-Authentifizierung ist nicht eingerichtet",
     "detail": "Das Konto mit einer Authenticator-App oder einem Sicherheitsschlüssel schützen.",

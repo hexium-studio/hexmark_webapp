@@ -1,0 +1,139 @@
+/* The access part of the token form (AccessFields.tsx): the mode radios,
+   the target tree and the chosen targets. Shared parts (groups, legends,
+   muted text) are in Tokens.module.css. */
+
+/* The access mode: two radio rows, each with its sentence, the whole row
+   the click target (at least 44 px high). The radio is the native one in
+   the primary colour (accent-color), focus ring as for the fields. */
+.modes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.mode {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  min-width: 0;
+  min-height: var(--control-min-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.radio {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.125rem 0 0;
+  accent-color: var(--color-button);
+  cursor: pointer;
+}
+
+.radio:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.modeText {
+  display: grid;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+.modeLabel {
+  font-weight: 600;
+}
+
+/* The target tree: nested lists, each level indented; a row is the open
+   button (or a spacer of its width, so names line up) and the checkbox. */
+.tree,
+.treeList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.treeList {
+  padding-inline-start: var(--space-6);
+}
+
+.treeItem {
+  display: grid;
+  grid-template-columns: var(--control-min-size) minmax(0, 1fr);
+  align-items: center;
+}
+
+.treeItem > .treeList {
+  grid-column: 1 / -1;
+}
+
+.treeItem label > span {
+  min-width: 0;
+}
+
+.treeToggle,
+.treeSpacer {
+  width: var(--control-min-size);
+  height: var(--control-min-size);
+}
+
+.treeToggle {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.treeToggle:hover {
+  color: var(--color-accent-text);
+}
+
+.treeToggle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* The chosen targets, one framed row each. */
+.entries,
+.entrySummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entrySummary {
+  gap: var(--space-1);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.entryPath {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.entryKind {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}

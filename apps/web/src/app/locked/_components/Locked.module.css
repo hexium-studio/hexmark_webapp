@@ -1,0 +1,103 @@
+/* The locked items page (LockedPage.tsx) in the wide card: one framed row
+   per item. Every column may shrink, so long paths wrap. */
+.section,
+.items,
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.path {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.kind {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Term and value pairs in as many columns as fit (at least 11rem each). */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.facts > div {
+  min-width: 0;
+}
+
+.facts dt {
+  color: var(--color-text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-size);
+  font-weight: 500;
+}
+
+/* Confirmation dialog (UnhideDialog.tsx). */
+.dialogForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* The item concerned, spelled out in full on its own line. */
+.subject {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-code-bg);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}

@@ -1,4 +1,5 @@
 import {
+  type ApiTokenEntryInfo,
   type ApiTokenInfo,
   type FieldErrors,
   NOTE_PERMISSIONS,
@@ -13,12 +14,12 @@ import type { ServerResponse } from "@/lib/server-api";
 
 export const TOKEN_ERROR_CODES = [
   "unauthenticated",
-  "reauthentication_required",
   "validation",
   "name_taken",
   "forbidden",
   "folder_not_found",
   "not_found",
+  "reauthentication_required",
   "setup_token_present",
   "database_unavailable",
   "server_not_configured",
@@ -50,32 +51,38 @@ export function readTokenFailure(response: ServerResponse): TokenFailure {
 const isString = (value: unknown): value is string => typeof value === "string";
 const isOptionalString = (value: unknown) => value === null || isString(value);
 
-function readScope(value: unknown): ApiTokenInfo["folderScope"] | undefined {
-  if (value === null) return null;
+function readPermissions(value: unknown): NotePermission[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const scope = value.map((entry) =>
-    isRecord(entry) && isString(entry.id) && isOptionalString(entry.path)
-      ? { id: entry.id, path: entry.path as string | null }
-      : undefined,
-  );
-  return scope.every((entry) => entry !== undefined) ? scope : undefined;
+  return NOTE_PERMISSIONS.filter((permission) => value.includes(permission));
+}
+
+function readEntry(value: unknown): ApiTokenEntryInfo | undefined {
+  if (!isRecord(value)) return undefined;
+  const { id, kind, targetId, path, targetTrashed, permissions } = value;
+  if (!isString(id) || !isString(targetId) || !isString(path)) return undefined;
+  if (kind !== "folder" && kind !== "note") return undefined;
+  const list = permissions === null ? null : readPermissions(permissions);
+  if (list === undefined) return undefined;
+  return { id, kind, targetId, path, targetTrashed: targetTrashed === true, permissions: list };
 }
 
 export function readTokenInfo(value: unknown): ApiTokenInfo | undefined {
   if (!isRecord(value)) return undefined;
-  const { id, name, prefix, permissions, expiresAt, lastUsedAt, createdAt, revokedAt } = value;
+  const { id, name, prefix, mode, expiresAt, lastUsedAt, createdAt, revokedAt } = value;
   if (!isString(id) || !isString(name) || !isString(prefix) || !isString(createdAt)) return;
   if (![expiresAt, lastUsedAt, revokedAt].every(isOptionalString)) return undefined;
-  if (!Array.isArray(permissions)) return undefined;
-  const known = NOTE_PERMISSIONS.filter((permission) => permissions.includes(permission));
-  const folderScope = readScope(value.folderScope);
-  if (folderScope === undefined) return undefined;
+  if (mode !== "allow_list" && mode !== "deny_list") return undefined;
+  const base = value.basePermissions === null ? null : readPermissions(value.basePermissions);
+  if (base === undefined || !Array.isArray(value.entries)) return undefined;
+  const entries = value.entries.map(readEntry);
+  if (entries.some((entry) => entry === undefined)) return undefined;
   return {
     id,
     name,
     prefix,
-    permissions: known as NotePermission[],
-    folderScope,
+    mode,
+    basePermissions: base,
+    entries: entries as ApiTokenEntryInfo[],
     expiresAt: expiresAt as string | null,
     lastUsedAt: lastUsedAt as string | null,
     createdAt,

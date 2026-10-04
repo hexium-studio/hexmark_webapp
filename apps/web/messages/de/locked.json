@@ -1,0 +1,75 @@
+{
+  "metaTitle": "Gesperrt und verborgen – Hexmark",
+  "title": "Gesperrt und verborgen",
+  "lead": "Agenten können nicht ändern, was hier gesperrt oder verborgen ist, und auch nichts unterhalb eines solchen Ordners; Verborgenes können sie nicht einmal lesen. Menschen können alles weiterhin lesen und ändern, entsperren oder wieder sichtbar machen.",
+  "home": "Zurück zur Startseite",
+  "unavailable": {
+    "title": "Der Server antwortet gerade nicht.",
+    "detail": "Die gesperrten und verborgenen Einträge können nicht angezeigt werden. Die Seite gleich neu laden."
+  },
+  "listTitle": "{count, plural, =0 {Nichts gesperrt} one {# gesperrter Eintrag} other {# gesperrte Einträge}}",
+  "none": "Nichts ist gesperrt. Agenten mit der Berechtigung Sperren können Notizen und Ordner sperren.",
+  "kinds": {
+    "note": "Notiz",
+    "folder": "Ordner"
+  },
+  "by": "Gesperrt von",
+  "at": "Seit",
+  "reason": "Grund",
+  "noReason": "Kein Grund angegeben",
+  "covers": "Umfasst auch",
+  "covered": "{folders, plural, one {# Ordner} other {# Ordner}} und {notes, plural, one {# Notiz} other {# Notizen}} darunter",
+  "unlock": "Entsperren",
+  "working": "Wird entsperrt …",
+  "done": "Entsperrt: {path}",
+  "errors": {
+    "unauthenticated": {
+      "title": "Abgemeldet",
+      "detail": "Die Sitzung ist abgelaufen. Bitte erneut anmelden."
+    },
+    "forbidden": {
+      "title": "Nicht erlaubt",
+      "detail": "Dieses Konto kann nichts entsperren."
+    },
+    "not_found": {
+      "title": "Nicht mehr da",
+      "detail": "Es wurde inzwischen gelöscht oder verschoben. Die Liste ist wieder aktuell."
+    },
+    "folder_not_found": {
+      "title": "Nicht mehr da",
+      "detail": "Der Ordner wurde inzwischen gelöscht. Die Liste ist wieder aktuell."
+    },
+    "unexpected": {
+      "title": "Etwas ist schiefgelaufen",
+      "detail": "Der Server hat unerwartet geantwortet. Bitte erneut versuchen."
+    }
+  },
+  "hidden": {
+    "listTitle": "{count, plural, =0 {Nichts verborgen} one {# verborgener Eintrag} other {# verborgene Einträge}}",
+    "none": "Nichts ist verborgen. Menschen und Agenten mit der Berechtigung Verbergen können Notizen und Ordner verbergen.",
+    "by": "Verborgen von",
+    "at": "Seit",
+    "covers": "Verbirgt auch",
+    "unhide": "Sichtbar machen",
+    "working": "Wird sichtbar gemacht …",
+    "done": "Für Agenten wieder sichtbar: {path}",
+    "confirm": {
+      "title": "Für Agenten wieder sichtbar machen?",
+      "detail": "Jeder Agent, der diese Notiz erreicht, kann sie dann wieder lesen. Eine Sperre bleibt bestehen.",
+      "detailFolder": "Jeder Agent, der diesen Ordner erreicht, kann dann alles darunter wieder sehen und lesen. Eine Sperre bleibt bestehen.",
+      "passwordLabel": "Passwort",
+      "passwordHint": "In den nächsten 10 Minuten wird nicht erneut gefragt.",
+      "passwordToggle": "Passwort",
+      "passwordMissing": "Passwort eingeben.",
+      "passwordWrong": "Dieses Passwort ist nicht korrekt.",
+      "submit": "Sichtbar machen",
+      "cancel": "Abbrechen"
+    },
+    "errors": {
+      "forbidden": {
+        "title": "Nicht erlaubt",
+        "detail": "Dieses Konto kann nichts sichtbar machen."
+      }
+    }
+  }
+}

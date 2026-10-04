@@ -1,0 +1,75 @@
+{
+  "metaTitle": "Locked and hidden – Hexmark",
+  "title": "Locked and hidden",
+  "lead": "Agents cannot change what is locked or hidden here, nor anything below such a folder, and they cannot read what is hidden. You can still read and change all of it, unlock it or unhide it.",
+  "home": "Back to home",
+  "unavailable": {
+    "title": "The server is not answering right now.",
+    "detail": "The locked and hidden items cannot be shown. Reload this page in a moment."
+  },
+  "listTitle": "{count, plural, =0 {Nothing is locked} one {# locked item} other {# locked items}}",
+  "none": "Nothing is locked. Agents with the lock permission can lock notes and folders.",
+  "kinds": {
+    "note": "Note",
+    "folder": "Folder"
+  },
+  "by": "Locked by",
+  "at": "Since",
+  "reason": "Reason",
+  "noReason": "No reason given",
+  "covers": "Also covers",
+  "covered": "{folders, plural, one {# folder} other {# folders}} and {notes, plural, one {# note} other {# notes}} below it",
+  "unlock": "Unlock",
+  "working": "Unlocking…",
+  "done": "Unlocked: {path}",
+  "errors": {
+    "unauthenticated": {
+      "title": "Signed out",
+      "detail": "Your session has ended. Sign in again."
+    },
+    "forbidden": {
+      "title": "Not allowed",
+      "detail": "Your account cannot unlock items."
+    },
+    "not_found": {
+      "title": "No longer there",
+      "detail": "It was deleted or moved meanwhile. The list is up to date again."
+    },
+    "folder_not_found": {
+      "title": "No longer there",
+      "detail": "The folder was deleted meanwhile. The list is up to date again."
+    },
+    "unexpected": {
+      "title": "Something went wrong",
+      "detail": "The server gave an unexpected answer. Try again."
+    }
+  },
+  "hidden": {
+    "listTitle": "{count, plural, =0 {Nothing is hidden} one {# hidden item} other {# hidden items}}",
+    "none": "Nothing is hidden. You and agents with the hide permission can hide notes and folders.",
+    "by": "Hidden by",
+    "at": "Since",
+    "covers": "Also hides",
+    "unhide": "Unhide",
+    "working": "Unhiding…",
+    "done": "Visible to agents again: {path}",
+    "confirm": {
+      "title": "Make this visible to agents again?",
+      "detail": "Every agent that can reach this note will be able to read it again. A lock on it stays.",
+      "detailFolder": "Every agent that can reach this folder will be able to see and read everything below it again. A lock on it stays.",
+      "passwordLabel": "Password",
+      "passwordHint": "For the next 10 minutes you will not be asked again.",
+      "passwordToggle": "password",
+      "passwordMissing": "Enter your password.",
+      "passwordWrong": "This password is not correct.",
+      "submit": "Unhide",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "forbidden": {
+        "title": "Not allowed",
+        "detail": "Your account cannot unhide items."
+      }
+    }
+  }
+}
