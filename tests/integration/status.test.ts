@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freePort } from "../support/processes";
-import { getJson, newDatabase, newServer, pgServer } from "./harness";
+import { getJson, newDatabase, newServer, pgServer, unreachablePort } from "./harness";
 
 // GET /health and GET /api/setup/v1/status: what step 1 of the wizard shows.
 
@@ -61,8 +60,7 @@ describe("GET /api/setup/v1/status", () => {
         POSTGRES_PASSWORD: pg.password,
         POSTGRES_DB: "postgres",
         DB_HOST: "127.0.0.1",
-        // Free right now, so nobody listens there.
-        DB_PORT: String(await freePort()),
+        DB_PORT: String(await unreachablePort()),
       },
     });
     const response = await getJson(server, "/api/setup/v1/status");

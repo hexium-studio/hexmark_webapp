@@ -2,7 +2,8 @@ import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { TEST_INTERNAL_API_KEY } from "./hexmark-server";
 import { ARTIFACTS_DIR, WEB_STANDALONE_DIR, WEB_STATIC_DIR } from "./paths";
-import { cleanEnv, freePort, type ManagedProcess, startProcess, waitFor } from "./processes";
+import { freePort, LISTEN_HOST } from "./ports";
+import { cleanEnv, type ManagedProcess, startProcess, waitFor } from "./processes";
 
 // Starts the production build of the web app the way the Docker image runs
 // it: the standalone server (apps/web/.next/standalone) with the static
@@ -32,41 +33,49 @@ export function emptyLocalesDir(): string {
   return dir;
 }
 
+// Next.js's standalone server cannot bind port 0 (it reads PORT=0 as
+// "unset" and takes 3000), so the port is chosen first, free on the address
+// the server then binds (HOSTNAME, LISTEN_HOST in ports.ts). Another process
+// can still take it in between; then the server exits with EADDRINUSE and is
+// started again on a new port.
+const START_ATTEMPTS = 5;
+const ADDRESS_IN_USE = /\bEADDRINUSE\b/;
+
 // `env`: further variables, e.g. TRUSTED_PROXIES, or INTERNAL_API_KEY: ""
 // for a web server that cannot forward client addresses.
 export async function startWebServer(
   serverUrl: string,
   env: Record<string, string> = {},
 ): Promise<WebServer> {
-  const port = await freePort();
-  const proc = startProcess({
-    name: `web-${port}`,
-    command: process.execPath,
-    args: ["server.js"],
-    cwd: WEB_STANDALONE_DIR,
-    env: cleanEnv({
-      NODE_ENV: "production",
-      NEXT_TELEMETRY_DISABLED: "1",
-      PORT: String(port),
-      HOSTNAME: "127.0.0.1",
-      SERVER_INTERNAL_URL: serverUrl,
-      HEXMARK_LOCALES_DIR: emptyLocalesDir(),
-      INTERNAL_API_KEY: TEST_INTERNAL_API_KEY,
-      ...env,
-    }),
-  });
-  const url = `http://127.0.0.1:${port}`;
-  try {
-    await waitFor(
-      `the web server on port ${port}`,
-      async () => {
-        return (await fetch(`${url}/`)).status === 200;
-      },
-      proc,
-    );
-  } catch (error) {
-    await proc.stop();
-    throw error;
+  for (let attempt = 1; ; attempt++) {
+    const port = await freePort();
+    const proc = startProcess({
+      name: "web",
+      command: process.execPath,
+      args: ["server.js"],
+      cwd: WEB_STANDALONE_DIR,
+      env: cleanEnv({
+        NODE_ENV: "production",
+        NEXT_TELEMETRY_DISABLED: "1",
+        PORT: String(port),
+        HOSTNAME: LISTEN_HOST,
+        SERVER_INTERNAL_URL: serverUrl,
+        HEXMARK_LOCALES_DIR: emptyLocalesDir(),
+        INTERNAL_API_KEY: TEST_INTERNAL_API_KEY,
+        ...env,
+      }),
+    });
+    const url = `http://127.0.0.1:${port}`;
+    try {
+      await waitFor(
+        `the web server on port ${port}`,
+        async () => (await fetch(`${url}/`)).status === 200,
+        proc,
+      );
+      return { url, process: proc, stop: () => proc.stop() };
+    } catch (error) {
+      await proc.stop();
+      if (!ADDRESS_IN_USE.test(proc.tail()) || attempt === START_ATTEMPTS) throw error;
+    }
   }
-  return { url, process: proc, stop: () => proc.stop() };
 }

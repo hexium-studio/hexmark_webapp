@@ -1,11 +1,15 @@
 import { existsSync } from "node:fs";
 import { SERVER_DIR, SERVER_DIST_ENTRY } from "./paths";
 import type { PgServer } from "./postgres-container";
-import { cleanEnv, freePort, type ManagedProcess, startProcess, waitFor } from "./processes";
+import { cleanEnv, type ManagedProcess, startProcess, waitFor } from "./processes";
 
 // Starts the Hexmark API server (apps/server) as its own process with its
 // own port, database and SETUP_TOKEN. Each instance has its own in-memory
 // rate limiter, so a fresh instance means fresh attempt counters.
+//
+// The server binds port 0, so the operating system picks a free port and no
+// other process can take it between choosing and binding; the port is read
+// from the server's start-up line.
 
 // Valid token used by the tests (8 characters, A-Z and 0-9).
 export const TEST_SETUP_TOKEN = "TEST2345";
@@ -27,7 +31,6 @@ export interface ServerOptions {
   setupToken?: string | null;
   // Wait until migrations are applied (GET /api/setup/v1/status answers 200).
   waitForDatabase?: boolean;
-  port?: number;
   // Further environment variables (e.g. SESSION_IDLE_TIMEOUT).
   env?: Record<string, string>;
 }
@@ -52,15 +55,17 @@ function databaseEnv(options: ServerOptions): Record<string, string> {
   };
 }
 
+// apps/server/src/index.ts prints it once the server listens.
+const LISTENING_LINE = /Hexmark server listening on port (\d+)/;
+
 export async function startHexmarkServer(options: ServerOptions): Promise<HexmarkServer> {
   if (options.mode === "dist" && !existsSync(SERVER_DIST_ENTRY)) {
     throw new Error("apps/server/dist is missing: run `pnpm build` before the e2e tests.");
   }
-  const port = options.port ?? (await freePort());
   const token = options.setupToken === undefined ? TEST_SETUP_TOKEN : options.setupToken;
   const env = cleanEnv({
     NODE_ENV: "production",
-    PORT: String(port),
+    PORT: "0",
     ...databaseEnv(options),
     ...(token === null ? {} : { SETUP_TOKEN: token }),
     INTERNAL_API_KEY: TEST_INTERNAL_API_KEY,
@@ -72,34 +77,32 @@ export async function startHexmarkServer(options: ServerOptions): Promise<Hexmar
   const args =
     options.mode === "source" ? ["--import", "tsx", "src/index.ts"] : [SERVER_DIST_ENTRY];
   const proc = startProcess({
-    name: `server-${port}`,
+    name: "server",
     command: process.execPath,
     args,
     cwd: SERVER_DIR,
     env,
   });
-  const url = `http://127.0.0.1:${port}`;
   const stop = () => proc.stop();
   try {
+    const [, bound] = await proc.waitForLine("the API server to listen", LISTENING_LINE);
+    const port = Number(bound);
+    const url = `http://127.0.0.1:${port}`;
     await waitFor(
       `the API server on port ${port}`,
-      async () => {
-        return (await fetch(`${url}/health`)).ok;
-      },
+      async () => (await fetch(`${url}/health`)).ok,
       proc,
     );
     if (options.waitForDatabase ?? true) {
       await waitFor(
         "the API server's migrations",
-        async () => {
-          return (await fetch(`${url}/api/setup/v1/status`)).status === 200;
-        },
+        async () => (await fetch(`${url}/api/setup/v1/status`)).status === 200,
         proc,
       );
     }
+    return { url, port, process: proc, stop };
   } catch (error) {
     await stop();
     throw error;
   }
-  return { url, port, process: proc, stop };
 }

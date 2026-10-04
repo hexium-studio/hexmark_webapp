@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { freePort } from "../support/processes";
-import { adminInput, getJson, newDatabase, newServer, pgServer, postJson } from "./harness";
+import {
+  adminInput,
+  getJson,
+  newDatabase,
+  newServer,
+  pgServer,
+  postJson,
+  unreachablePort,
+} from "./harness";
 
 // GET /api/instance/v1/locale: the instance default locale the web app uses
 // for visitors without a saved or chosen locale.
@@ -25,7 +32,7 @@ describe("GET /api/instance/v1/locale", () => {
         POSTGRES_PASSWORD: pg.password,
         POSTGRES_DB: "postgres",
         DB_HOST: "127.0.0.1",
-        DB_PORT: String(await freePort()),
+        DB_PORT: String(await unreachablePort()),
       },
     });
     expect(await getJson(server, PATH)).toEqual({

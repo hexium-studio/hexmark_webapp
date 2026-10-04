@@ -6,6 +6,7 @@ import {
   startHexmarkServer,
   TEST_SETUP_TOKEN,
 } from "../support/hexmark-server";
+import { deadEndPort } from "../support/ports";
 
 // Per-file helpers: an own database in the shared container and API server
 // processes started from source, all stopped and dropped after the file.
@@ -38,6 +39,14 @@ export async function newServer(
   });
   cleanups.push(() => server.stop());
   return server;
+}
+
+// A port where connections are refused for the rest of the file, e.g. a
+// database port nobody answers on (support/ports.ts).
+export async function unreachablePort(): Promise<number> {
+  const listener = await deadEndPort();
+  cleanups.push(() => listener.close());
+  return listener.port;
 }
 
 export interface JsonResponse {

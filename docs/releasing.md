@@ -14,10 +14,11 @@ on `dev` the local `pre-push` hook and `pnpm test:all` do the checking (see
 **CI** (`checks`) runs `pnpm test:all`, the same command you run locally before
 opening a pull request: lint, typecheck, `check:translations`, `check:docs`,
 build, unit, integration and e2e tests, and a Docker build of both images (not
-pushed). The list of checks lives only in `tools/run-checks.mjs`. On failure the job
-uploads `tests/.artifacts/` (Playwright traces and screenshots, server logs)
-as the artifact `test-artifacts-<run id>-<attempt>`. A new push to a pull
-request cancels the run still going for it; runs on `main` always finish.
+pushed). The list of checks lives only in `tools/run-checks.mjs`. It uploads nothing:
+the job's console output names failed tests with their errors, and run logs
+stay local ([tests/README.md, "CI artifacts"](../tests/README.md#ci-artifacts)). A new
+push to a pull request cancels the run still going for it; runs on `main`
+always finish.
 
 **Release** does, in this order:
 

@@ -8,16 +8,19 @@ import { DEFAULT_DB_HOST, DEFAULT_DB_PORT } from "./database";
 const DEFAULT_PORT = 3001;
 
 // Undefined for a blank value, null for an invalid one.
-function parsePort(raw: string | undefined): number | null | undefined {
+function parsePort(raw: string | undefined, lowest = 1): number | null | undefined {
   if (raw === undefined || raw.trim() === "") return undefined;
   const port = Number(raw);
-  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null;
+  return Number.isInteger(port) && port >= lowest && port <= 65535 ? port : null;
 }
 
-function readPort(raw: string | undefined): number {
-  const port = parsePort(raw);
+// 0 lets the operating system pick a free port; the start-up line
+// "Hexmark server listening on port <n>" names it. The tests start their
+// servers that way, so no other process can take the port in between.
+export function readPort(raw: string | undefined): number {
+  const port = parsePort(raw, 0);
   if (port === null) {
-    throw new Error(`PORT must be a whole number between 1 and 65535, got "${raw}".`);
+    throw new Error(`PORT must be a whole number between 0 and 65535, got "${raw}".`);
   }
   return port ?? DEFAULT_PORT;
 }
