@@ -1,11 +1,14 @@
 // Drizzle table definitions, one file per table.
 export * from "./actor-columns";
+export * from "./api-token-entries";
 export * from "./api-tokens";
 export * from "./audit-events";
 export * from "./auth-challenges";
 export * from "./folders";
+export * from "./hidden-columns";
 export * from "./id-column";
 export * from "./instance-settings";
+export * from "./lock-columns";
 export * from "./note-revisions";
 export * from "./note-sections";
 export * from "./notes";

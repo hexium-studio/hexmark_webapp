@@ -4,7 +4,7 @@ import type { Transaction } from "../../db/client";
 import { folders, notes } from "../../db/schema";
 import type { Failure, Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { authorize, canSeeFolder, type Grant } from "../access/authorize";
+import { authorize, type Grant } from "../access/authorize";
 import { recordAccessEvent } from "../audit/access-events";
 import { actorOfAccess, sourceOf } from "../audit/actor";
 import { runAudited } from "../audit/audited";
@@ -16,7 +16,6 @@ import { reauthenticationRefusal } from "../sessions/reauthentication";
 import { lockTrashRemoval } from "./purge";
 import { indexBeforeRemoval, type RemovalLog, recordRemovals } from "./removal-events";
 import { type Removed, removedCounts, removeFromTrash } from "./trash-remove";
-import { inTrashScope, trashScope } from "./trash-store";
 
 // Deleting from the trash for good before the purge would: a note, a folder
 // with everything of it in the trash, or the whole trash. Only people do
@@ -76,10 +75,11 @@ export function deleteNoteForGood(ref: AccessRef, now: Date, id: string) {
       .where(eq(notes.id, id))
       .for("update");
     if (!row) return refuse("not_found");
+    const note = { id, folderId: row.folderId };
     if (row.deletedAt === null) {
-      return canSeeFolder(grant, row.folderId) ? refuse("note_not_deleted") : refuse("not_found");
+      return grant.view.seesNote(note) ? refuse("note_not_deleted") : refuse("not_found");
     }
-    if (!inTrashScope(await trashScope(tx, grant), row.folderId)) return refuse("not_found");
+    if (!(await grant.trashView()).seesNote(note)) return refuse("not_found");
     return removeFromTrash(tx, { noteIds: [id] });
   });
 }
@@ -96,7 +96,7 @@ export function deleteFolderForGood(ref: AccessRef, now: Date, id: string) {
       .from(folders)
       .where(eq(folders.id, id))
       .for("update");
-    if (!row || !inTrashScope(await trashScope(tx, grant), id)) return refuse("folder_not_found");
+    if (!row || !(await grant.trashView()).seesFolder(id)) return refuse("folder_not_found");
     if (row.deletedAt === null) return refuse("folder_not_deleted");
     const ids = await folderSubtreeIds(tx, [id], true);
     const removed = await removeFromTrash(tx, { folderIds: ids });

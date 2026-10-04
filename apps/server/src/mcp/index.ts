@@ -16,6 +16,8 @@ import type { AccessRef } from "../services/access/access";
 import { type AccessDescription, describeAccess } from "../services/access/describe";
 import { requestAccess } from "../services/access/request-access";
 import { GUIDE_URI, guideText, serverInstructions } from "./guide";
+import { hideTools } from "./hide-tools";
+import { lockTools } from "./lock-tools";
 import { noteTools } from "./note-tools";
 import { readTools } from "./read-tools";
 import { ToolRegistry } from "./tool-registry";
@@ -53,7 +55,14 @@ function buildServer(ref: AccessRef, access: AccessDescription): Server {
     instructions: serverInstructions(access),
   });
   const tools = new ToolRegistry(ref);
-  tools.add(...readTools(ref), ...noteTools(ref), ...writeTools(ref), ...trashTools(ref));
+  tools.add(
+    ...readTools(ref),
+    ...noteTools(ref),
+    ...writeTools(ref),
+    ...trashTools(ref),
+    ...lockTools(ref),
+    ...hideTools(ref),
+  );
   server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: tools.list() }));
   server.setRequestHandler(CallToolRequestSchema, (request) =>
     tools.call(request.params.name, request.params.arguments),

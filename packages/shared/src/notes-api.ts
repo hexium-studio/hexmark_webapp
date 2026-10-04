@@ -162,6 +162,14 @@ export const moveFolderInputSchema = z.object({ parentId: folderRefSchema, reaso
 export const deleteFolderInputSchema = z.object({ reason: reasonSchema });
 export const restoreFolderInputSchema = z.object({ reason: reasonSchema });
 
+// Locking and unlocking a note or folder (POST .../lock, .../unlock). An
+// agent must give a reason for locking; people may leave it out.
+export const lockInputSchema = z.object({ reason: reasonSchema });
+
+// Hiding and unhiding a note or folder (POST .../hide, .../unhide). An agent
+// must give a reason for hiding; people may leave it out.
+export const hideInputSchema = z.object({ reason: reasonSchema });
+
 export const trashQuerySchema = z.object({
   folder: idSchema.optional(),
   limit: queryInt(TRASH_LIST_LIMITS),

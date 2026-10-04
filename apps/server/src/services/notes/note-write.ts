@@ -11,12 +11,13 @@ import type { Transaction } from "../../db/client";
 import { notes } from "../../db/schema";
 import type { Failure, Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { authorize, canSeeFolder, type Grant } from "../access/authorize";
+import { authorize, type Grant, noteRefusal } from "../access/authorize";
 import { recordAccessEvent } from "../audit/access-events";
 import { runAudited } from "../audit/audited";
-import { inTrashScope, type TrashMark, trashScope } from "../trash/trash-store";
+import { noteWriteRefusal } from "../locks/lock-guard";
+import type { TrashMark } from "../trash/trash-store";
 import { isUuid, type NoteRef, resolveNoteRef } from "./addressing";
-import { type FolderIndex, joinPath, loadFolderIndex } from "./folder-index";
+import { type FolderIndex, joinPath } from "./folder-index";
 import { type NoteChangeFacts, noteChangeEvent } from "./note-events";
 import {
   insertRevision,
@@ -31,9 +32,12 @@ import type { ParsedSection } from "./sections";
 import { type ConflictSection, guardTitle, versionConflict } from "./write-refusals";
 
 // The one path every change of an existing note takes, in one transaction:
-// authorize (permission and folders), lock the note's row, compare the
-// version the client based its change on, apply the change, raise the
-// version, write the revision snapshot and rebuild the sections.
+// authorize, lock the note's row, check the permission on it, its hidden
+// mark and its lock (agents cannot change hidden or locked notes; checked
+// before the version, so a refusal tells nothing of the content), compare
+// the version the client based
+// its change on, apply the change, raise the version, write the revision
+// snapshot and rebuild the sections.
 
 // Into the trash or out of it: all trash columns together (trash-store.ts).
 export interface NoteEdit extends Partial<TrashMark> {
@@ -120,20 +124,18 @@ async function lockTarget(
   } else id = await resolveNoteRef(tx, grant, index, request.note);
   if (isFailure(id)) return id;
   const row = await lockNote(tx, id, request.inTrash);
-  // A note in the trash may lie in a folder in the trash, which the folders
-  // in use (grant.scope) do not include.
-  const visible =
-    row !== undefined &&
-    (request.inTrash
-      ? inTrashScope(await trashScope(tx, grant), row.folderId)
-      : canSeeFolder(grant, row.folderId));
-  if (!row || !visible) {
+  // A note in the trash is judged by the folders it lay in, which may be in
+  // the trash with it.
+  const view = request.inTrash ? await grant.trashView() : grant.view;
+  if (!row || !view.seesNote(row)) {
     const live = request.inTrash ? await readLiveNote(tx, id) : undefined;
-    return live && canSeeFolder(grant, live.folderId)
-      ? refuse("note_not_deleted")
-      : refuse("not_found");
+    return live && grant.view.seesNote(live) ? refuse("note_not_deleted") : refuse("not_found");
   }
-  return row;
+  return (
+    noteRefusal(view, row, request.permission) ??
+    (await noteWriteRefusal(tx, grant, row, request.permission, view)) ??
+    row
+  );
 }
 
 export function writeNote(request: NoteWriteRequest): Promise<Outcome<NoteWriteResult>> {
@@ -141,7 +143,7 @@ export function writeNote(request: NoteWriteRequest): Promise<Outcome<NoteWriteR
   return runAudited({ ref, action, input }, async (tx) => {
     const grant = await authorize(tx, request.ref, request.now, request.permission);
     if (isFailure(grant)) return grant;
-    const context: WriteContext = { tx, grant, index: await loadFolderIndex(tx) };
+    const context: WriteContext = { tx, grant, index: grant.index };
     const row = await lockTarget(context, request);
     if (isFailure(row)) return row;
     if (request.expectedVersion !== null && row.version !== request.expectedVersion) {
@@ -168,7 +170,7 @@ export function writeNote(request: NoteWriteRequest): Promise<Outcome<NoteWriteR
     };
     const next: NoteRow = { ...row, ...changes };
     // Title and folder may now clash with another note's (unique index).
-    const updated = await guardTitle(tx, context.index, next, (savepoint) =>
+    const updated = await guardTitle(tx, grant.view, next, (savepoint) =>
       savepoint.update(notes).set(changes).where(eq(notes.id, row.id)),
     );
     if (isFailure(updated)) return updated;

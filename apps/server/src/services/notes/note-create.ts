@@ -1,14 +1,14 @@
-import type { NoteWriteResult } from "@hexmark/shared";
+import type { NotePermission, NoteWriteResult } from "@hexmark/shared";
 import { and, eq, getTableColumns, isNull } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { folders, notes } from "../../db/schema";
 import type { Failure, Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { authorize, type Grant, requireFolder } from "../access/authorize";
+import { authorize, chainRefusal, type Grant, placeRefusal } from "../access/authorize";
 import { recordAccessEvent } from "../audit/access-events";
 import { runAudited } from "../audit/audited";
+import { folderChainRefusal } from "../locks/lock-guard";
 import { missingFolder } from "../trash/in-trash";
-import { loadFolderIndex } from "./folder-index";
 import { noteCreatedEvent } from "./note-events";
 import { insertRevision, rebuildSections } from "./note-store";
 import { overBudgetWarnings, writeResult } from "./note-write";
@@ -28,13 +28,15 @@ export interface NewNote {
 
 const { search: _search, ...noteColumns } = getTableColumns(notes);
 
-// The target folder must exist, be visible to the caller and stay until the
-// transaction ends (a share lock keeps it from being deleted meanwhile); one
-// in the trash is refused with folder_in_trash.
+// The target folder must exist, grant the caller `permission` and stay until
+// the transaction ends (a share lock keeps it from being deleted meanwhile);
+// one in the trash is refused with folder_in_trash. An agent cannot put
+// anything into a locked folder (or one below a locked folder).
 export async function lockTargetFolder(
   tx: Transaction,
   grant: Grant,
   folderId: string | null,
+  permission: NotePermission,
 ): Promise<Failure | null> {
   if (folderId !== null) {
     const [folder] = await tx
@@ -44,7 +46,13 @@ export async function lockTargetFolder(
       .for("share");
     if (!folder) return missingFolder(tx, grant, folderId);
   }
-  return requireFolder(grant, folderId);
+  const place = { kind: "place" } as const;
+  return (
+    placeRefusal(grant.view, folderId, permission) ??
+    folderChainRefusal(tx, grant, folderId, grant.view, (chain, hidden) =>
+      chainRefusal(grant.access.policy, place, chain, hidden, permission),
+    )
+  );
 }
 
 export function createNote(
@@ -53,13 +61,13 @@ export function createNote(
   input: NewNote,
 ): Promise<Outcome<NoteWriteResult>> {
   return runAudited({ ref, action: "note.created", input }, async (tx) => {
-    const grant = await authorize(tx, ref, now, "create");
+    const grant = await authorize(tx, ref, now, "create", true);
     if (isFailure(grant)) return grant;
-    const refused = await lockTargetFolder(tx, grant, input.folderId);
+    const refused = await lockTargetFolder(tx, grant, input.folderId, "create");
     if (refused) return refused;
     const { actor } = grant.access;
-    const index = await loadFolderIndex(tx);
-    const inserted = await guardTitle(tx, index, input, (savepoint) =>
+    const { index } = grant;
+    const inserted = await guardTitle(tx, grant.view, input, (savepoint) =>
       savepoint
         .insert(notes)
         .values({

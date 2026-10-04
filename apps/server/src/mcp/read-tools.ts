@@ -4,7 +4,7 @@ import type { AccessRef } from "../services/access/access";
 import { listChanges } from "../services/notes/history";
 import { readOverview } from "../services/notes/overview";
 import { searchNotes } from "../services/notes/search";
-import { listTree } from "../services/notes/tree";
+import { listTree } from "../services/notes/tree-listing";
 import { toolResult } from "./results";
 import { defineTool, type RegisteredTool } from "./tool-registry";
 

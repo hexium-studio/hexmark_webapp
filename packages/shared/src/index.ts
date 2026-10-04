@@ -1,10 +1,13 @@
 // Types and Zod schemas shared between the server and the web app.
+export * from "./api-token-access";
 export * from "./api-tokens";
 export * from "./audit-actions";
 export * from "./audit-api";
 export * from "./auth";
 export * from "./field-errors";
+export * from "./hidden";
 export * from "./locale";
+export * from "./locks";
 export * from "./mcp/inputs";
 export * from "./note-errors";
 export * from "./notes";

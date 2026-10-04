@@ -10,7 +10,9 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { actorChecks, actorColumns } from "./actor-columns";
+import { hiddenChecks, hiddenColumns, hiddenIndexes } from "./hidden-columns";
 import { idColumn } from "./id-column";
+import { lockChecks, lockColumns } from "./lock-columns";
 import { trashChecks, trashColumns, trashIndexes } from "./trash-columns";
 
 // Shared with the input schemas (@hexmark/shared), which also refuse "/" in names.
@@ -19,6 +21,8 @@ export { FOLDER_NAME_MAX_LENGTH };
 const createdBy = actorColumns("created_by");
 const updatedBy = actorColumns("updated_by");
 const trash = trashColumns();
+const lock = lockColumns();
+const hide = hiddenColumns();
 
 // The folder tree. Folders are addressed by id; renaming or moving never
 // changes it. Cycles are refused by the application when moving; the
@@ -48,6 +52,20 @@ export const folders = pgTable(
     deletedByTokenId: trash.deletedByTokenId,
     deletedByName: trash.deletedByName,
     trashBatchId: trash.trashBatchId,
+    // Locked, together with everything below it (lock-columns.ts); null
+    // while the folder is not locked itself.
+    lockedAt: lock.lockedAt,
+    lockedByUserId: lock.lockedByUserId,
+    lockedByTokenId: lock.lockedByTokenId,
+    lockedByName: lock.lockedByName,
+    lockReason: lock.lockReason,
+    // Hidden from agents, together with everything below it
+    // (hidden-columns.ts); null while the folder is not hidden itself.
+    hiddenAt: hide.hiddenAt,
+    hiddenByUserId: hide.hiddenByUserId,
+    hiddenByTokenId: hide.hiddenByTokenId,
+    hiddenByName: hide.hiddenByName,
+    hideReason: hide.hideReason,
   },
   (table) => [
     // Names are unique among the folder's siblings regardless of case,
@@ -76,6 +94,9 @@ export const folders = pgTable(
     }),
     ...trashChecks("folders", table),
     ...trashIndexes("folders", table),
+    ...lockChecks("folders", table),
+    ...hiddenChecks("folders", table),
+    ...hiddenIndexes("folders", table),
   ],
 );
 

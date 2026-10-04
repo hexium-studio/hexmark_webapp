@@ -1,27 +1,8 @@
-import {
-  NOTE_PERMISSIONS,
-  type NotePermission,
-  ROLE_PERMISSIONS,
-  type UserRole,
-} from "@hexmark/shared";
+import { type NotePermission, ROLE_PERMISSIONS, type UserRole } from "@hexmark/shared";
 
 // What a role grants comes from @hexmark/shared (ROLE_PERMISSIONS), so the
-// web app offers exactly what is enforced here. Pure, so it can be tested on
-// its own.
-
-// What a request may do: the owner's role, and for an agent also the token's
-// own permissions. A token never exceeds its owner.
-export function effectivePermissions(
-  role: UserRole,
-  tokenPermissions: readonly NotePermission[] | null,
-): NotePermission[] {
-  const granted = ROLE_PERMISSIONS[role];
-  return NOTE_PERMISSIONS.filter(
-    (permission) =>
-      granted.includes(permission) &&
-      (tokenPermissions === null || tokenPermissions.includes(permission)),
-  );
-}
+// web app offers exactly what is enforced. Pure, so it can be tested on its
+// own. How a token's permissions combine with the role: policy.ts.
 
 // Permissions asked for that the role does not grant (for refusing a token
 // that could never use them).

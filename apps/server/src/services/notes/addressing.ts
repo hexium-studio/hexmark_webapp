@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { notes } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
-import { canSeeFolder, type Grant, visibleFolderSql } from "../access/authorize";
+import type { Grant } from "../access/authorize";
 import { inTrashRefusal } from "../trash/in-trash";
 import { type FolderIndex, joinPath } from "./folder-index";
 import { refuse } from "./refusals";
@@ -11,7 +11,7 @@ import { refuse } from "./refusals";
 // Finding a note by what a client calls it: its id, its title, or its folder
 // path and title ("Projects/Naming conventions"; "/Title" for the root
 // level). Titles never contain "/", so the last segment is the title.
-// Notes outside the caller's folders are not found, as if they did not exist.
+// Notes the caller cannot see are not found, as if they did not exist.
 // Notes in the trash are never found by title or path; named by their id
 // they are refused with in_trash (services/trash/in-trash.ts).
 
@@ -47,7 +47,7 @@ async function byId(tx: Transaction, grant: Grant, id: string): Promise<string |
     .select({ id: notes.id, folderId: notes.folderId })
     .from(notes)
     .where(and(eq(notes.id, id), isNull(notes.deletedAt)));
-  return row && canSeeFolder(grant, row.folderId) ? row.id : null;
+  return row && grant.view.seesNote(row) ? row.id : null;
 }
 
 async function byTitle(
@@ -71,7 +71,7 @@ async function byTitle(
         sql`lower(${notes.title}) = lower(${address.title})`,
         isNull(notes.deletedAt),
         folderCondition,
-        visibleFolderSql(grant, notes.folderId),
+        grant.view.noteSql(null, notes.id, notes.folderId),
       ),
     )
     .limit(MAX_CANDIDATES + 1);

@@ -3,6 +3,7 @@ import { and, isNull, ne, sql } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { folders } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
+import type { AccessView } from "../access/access-view";
 import { joinPath, loadFolderIndex } from "./folder-index";
 import { refuse } from "./refusals";
 import { constraintOf } from "./transaction";
@@ -12,7 +13,8 @@ import { constraintOf } from "./transaction";
 // a parent - creating, renaming, moving, restoring from the trash - runs
 // through guardFolderName: when the index refuses, the transaction goes on
 // and the answer is name_taken naming the folder that holds the name, the
-// same way title_taken names the note holding a title.
+// same way title_taken names the note holding a title (its id only when the
+// caller can see it: a sibling may be excluded from a token's reach).
 
 const NAME_CLASH = new Set(["folders_parent_id_name_unique", "folders_root_name_unique"]);
 
@@ -25,6 +27,7 @@ export interface FolderPlace {
 
 export async function guardFolderName<T>(
   tx: Transaction,
+  view: AccessView,
   place: FolderPlace,
   write: (savepoint: Transaction) => Promise<T>,
 ): Promise<T | Failure> {
@@ -47,7 +50,7 @@ export async function guardFolderName<T>(
     if (!holder) return refuse("name_taken");
     const index = await loadFolderIndex(tx);
     const details: NameTakenDetails = {
-      existingFolderId: holder.id,
+      existingFolderId: view.shownFolderId(holder.id),
       path: joinPath(index.pathOf(place.parentId), holder.name),
     };
     return refuse("name_taken", { ...details });

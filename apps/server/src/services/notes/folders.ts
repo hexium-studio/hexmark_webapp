@@ -4,16 +4,18 @@ import type { Transaction } from "../../db/client";
 import { type Folder, folders } from "../../db/schema";
 import type { Failure, Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { authorize, type Grant, requireFolder } from "../access/authorize";
+import { authorize, chainRefusal, folderRefusal, type Grant } from "../access/authorize";
 import { recordAccessEvent } from "../audit/access-events";
 import { runAudited } from "../audit/audited";
 import type { AuditTarget } from "../audit/record";
+import { folderChainRefusal } from "../locks/lock-guard";
 import { missingFolder } from "../trash/in-trash";
 import { isUuid } from "./addressing";
 import { folderCycleRefusal } from "./folder-cycle";
 import { joinPath, loadFolderIndex } from "./folder-index";
 import { guardFolderName } from "./folder-name";
 import { lockTargetFolder } from "./note-create";
+import { updatedBy } from "./note-store";
 import { isFailure, refuse } from "./refusals";
 import { showParent } from "./scoped-folder";
 
@@ -32,28 +34,18 @@ async function result(tx: Transaction, grant: Grant, row: Folder): Promise<Folde
   return { id: row.id, name: row.name, ...showParent(grant, row.parentId), path };
 }
 
-function updatedBy(grant: Grant, now: Date) {
-  const { actor } = grant.access;
-  return {
-    updatedAt: now,
-    updatedByUserId: actor.userId,
-    updatedByTokenId: actor.tokenId,
-    updatedByName: actor.name,
-  };
-}
-
 export function createFolder(
   ref: AccessRef,
   now: Date,
   input: { parentId: string | null; name: string; reason?: string },
 ): Promise<Outcome<FolderResult>> {
   return runAudited({ ref, action: "folder.created", input }, async (tx) => {
-    const grant = await authorize(tx, ref, now, "create");
+    const grant = await authorize(tx, ref, now, "create", true);
     if (isFailure(grant)) return grant;
-    const refused = await lockTargetFolder(tx, grant, input.parentId);
+    const refused = await lockTargetFolder(tx, grant, input.parentId, "create");
     if (refused) return refused;
     const { actor } = grant.access;
-    const inserted = await guardFolderName(tx, input, (savepoint) =>
+    const inserted = await guardFolderName(tx, grant.view, input, (savepoint) =>
       savepoint
         .insert(folders)
         .values({
@@ -63,7 +55,7 @@ export function createFolder(
           createdByUserId: actor.userId,
           createdByTokenId: actor.tokenId,
           createdByName: actor.name,
-          ...updatedBy(grant, now),
+          ...updatedBy(grant.access.actor, now),
         })
         .returning(),
     );
@@ -97,8 +89,9 @@ interface FolderChange {
   apply: (tx: Transaction, grant: Grant, row: Folder) => Promise<Folder | Failure>;
 }
 
-// One folder change: authorize, lock the folder, check it is in use and
-// visible, apply, and log it with the path before and after.
+// One folder change: authorize, lock the folder, check it is in use, that
+// the caller holds the permission on it and (an agent) that it is not
+// locked, apply, and log it with the path before and after.
 function changeFolder(
   ref: AccessRef,
   now: Date,
@@ -117,7 +110,12 @@ function changeFolder(
       .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
       .for("update");
     if (!row) return missingFolder(tx, grant, id);
-    if (requireFolder(grant, row.id)) return refuse("folder_not_found");
+    const refused =
+      folderRefusal(grant.view, row.id, permission) ??
+      (await folderChainRefusal(tx, grant, row.id, grant.view, (chain, hidden) =>
+        chainRefusal(grant.access.policy, { kind: "folder" }, chain, hidden, permission),
+      ));
+    if (refused) return refused;
     const previousPath = (await loadFolderIndex(tx)).pathOf(row.id);
     const changed = await change.apply(tx, grant, row);
     if (isFailure(changed)) return changed;
@@ -143,6 +141,7 @@ function changeFolder(
 
 async function save(
   tx: Transaction,
+  grant: Grant,
   row: Folder,
   values: Partial<Folder>,
 ): Promise<Folder | Failure> {
@@ -151,7 +150,7 @@ async function save(
     parentId: values.parentId ?? row.parentId,
     name: values.name ?? row.name,
   };
-  const saved = await guardFolderName(tx, place, (savepoint) =>
+  const saved = await guardFolderName(tx, grant.view, place, (savepoint) =>
     savepoint.update(folders).set(values).where(eq(folders.id, row.id)).returning(),
   );
   if (isFailure(saved)) return saved;
@@ -171,7 +170,9 @@ export function renameFolder(
     permission: "edit",
     input,
     apply: async (tx, grant, row) =>
-      row.name === input.name ? row : save(tx, row, { name: input.name, ...updatedBy(grant, now) }),
+      row.name === input.name
+        ? row
+        : save(tx, grant, row, { name: input.name, ...updatedBy(grant.access.actor, now) }),
   });
 }
 
@@ -197,11 +198,13 @@ export function moveFolder(
     input,
     apply: async (tx, grant, row) => {
       if (row.parentId === parentId) return row;
+      // The target first: a cycle names the target's path, which a caller
+      // who cannot see the target (below a hidden folder) must not learn.
+      const refused = await lockTargetFolder(tx, grant, parentId, "move");
+      if (refused) return refused;
       const cycle = await folderCycleRefusal(tx, id, parentId);
       if (cycle) return cycle;
-      const refused = await lockTargetFolder(tx, grant, parentId);
-      if (refused) return refused;
-      return save(tx, row, { parentId, ...updatedBy(grant, now) });
+      return save(tx, grant, row, { parentId, ...updatedBy(grant.access.actor, now) });
     },
   });
 }

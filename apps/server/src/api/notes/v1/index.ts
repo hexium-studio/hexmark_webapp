@@ -7,6 +7,12 @@ import { deleteFolderEndpoint } from "./folders/delete";
 import { postMoveFolder } from "./folders/move";
 import { patchFolder } from "./folders/rename";
 import { postRestoreFolder } from "./folders/restore";
+import { postHideFolder, postUnhideFolder } from "./hidden/hide-folder";
+import { postHideNote, postUnhideNote } from "./hidden/hide-note";
+import { getHidden } from "./hidden/list";
+import { getLocked } from "./locks/list";
+import { postLockFolder, postUnlockFolder } from "./locks/lock-folder";
+import { postLockNote, postUnlockNote } from "./locks/lock-note";
 import { postNote } from "./notes/create";
 import { deleteNote } from "./notes/delete";
 import { postMoveNote } from "./notes/move";
@@ -32,10 +38,23 @@ import { getTree } from "./tree";
 // `Authorization: Bearer hmk_...` (API token). Changes are recorded with the
 // username or the token's name. Permissions: read (tree, notes, revisions,
 // changes), search, create, edit (title, body, sections, folder names), move,
-// delete (the trash: deleting, listing, restoring); a token holds the intersection of
-// its own and its owner's role; a token limited to folders sees only those
-// and their subfolders (other notes are not found; writing into another
-// folder is 403 forbidden { reason: "outside_scope" }).
+// delete (the trash: deleting, listing, restoring), lock, hide; a token's permissions
+// per note and folder come from its access mode and entries (allow_list: only
+// the listed folders with what lies below them and the listed notes, each
+// entry with its own permissions; deny_list: everything except the listed
+// targets, with the base permissions), intersected with its owner's role
+// (services/access/policy.ts). What a token cannot reach is not found;
+// writing into it is 403 forbidden { reason: "outside_scope" } (also the
+// root level for an allow_list token); an item it sees without the
+// permission is 403 forbidden { permission }.
+//
+// Locks: a locked note or folder (and everything below a locked folder) is
+// read-only for API tokens: changing, moving, renaming, deleting, restoring
+// or creating inside it answers 423 locked { lockedItem: { kind, id, path },
+// lockedAt, lockedBy, reason } (id null for a folder the token cannot see).
+// People may change locked items. Reads show `locked: { at, by, reason,
+// inherited, from: { kind, id, path } } | null` on notes (header) and in the
+// tree (folders and notes).
 //
 // GET  /tree?folder&depth          { folder, folders, notes }; depth 1-10 (1); each
 //                                    folder: { id, name, path, folderCount, noteCount,
@@ -43,7 +62,8 @@ import { getTree } from "./tree";
 //                                    where the depth ends; notes: { id, title, version,
 //                                    updatedAt, updatedBy, lastChange }
 // GET  /notes/:id?view=full        { note: { ...header, body, metadata, characters,
-//                                    approxTokens } }
+//                                    approxTokens } } (header.folderId, like a search
+//                                    hit's: null for a folder the token cannot reach)
 //      ?view=outline               { note, budget, sections: [{ position, level, heading,
 //                                    path, parentPosition, characters, approxTokens,
 //                                    overBudget }] }
@@ -86,7 +106,8 @@ import { getTree } from "./tree";
 //                                    version, rank (0-1, relative to the best hit) }] }
 // GET  /changes?since&limit        { changes: [{ noteId, title, folderPath, version,
 //                                    change, changes, actorName, reason, sectionPath,
-//                                    changedAt, deleted }] }
+//                                    changedAt, deleted, locked, hidden }] } (locked,
+//                                    hidden: the states reads show, or null)
 // POST /folders  { parentId?, name, reason? }  201 { id, name, parentId,
 //      parentOutsideScope, path }; a parent outside the token's folders: parentId null,
 //      flag true; the reason is recorded in the audit log
@@ -108,6 +129,47 @@ import { getTree } from "./tree";
 //      the folder itself - and notes that came back with it; each note with a new
 //      version); 409 folder_not_deleted |
 //      parent_in_trash | name_taken { existingFolderId, path }
+//
+// POST /notes/:id/lock, POST /folders/:id/lock  { reason? } (permission lock; a token
+//      must give a reason, 400 validation { reason: required })  { kind, id, path, locked,
+//      changed, message? } (changed false: it held a lock of its own already, which
+//      stays, and message says so); a token locking inside a locked folder gets 423
+//      locked with alreadyLocked: true (it is locked already); only notes and folders in
+//      use
+// POST /notes/:id/unlock, POST /folders/:id/unlock  { reason? } signed-in people only (an
+//      API token gets 403 forbidden { reason: "session_required" }), permission lock;
+//      lifts the item's own lock (changed false: it had none; a lock inherited from a
+//      folder above stays and shows in `locked`). No password re-entry: unlocking gives
+//      nobody more access, and it is logged and can be undone by locking again
+// GET  /locked                     { items: [{ kind, id, path, lockedAt, lockedBy, reason,
+//                                    coveredFolders, coveredNotes }] } the notes and folders
+//                                    in use with a lock of their own that the caller may
+//                                    read, by path; covered*: what a folder's lock covers
+//                                    below it (readable)
+//
+// Hidden: a hidden note's content (body, outline, sections, revision bodies,
+// the section a change edited) cannot be read by API tokens, and everything
+// below a hidden folder does not exist for them (not found; left out of
+// listings, search, changes and the trash; listing or searching the folder
+// itself is 403 hidden). A hidden note is still listed, and found by its
+// title (a search hit without section). API tokens cannot change, move,
+// rename, delete, restore, lock or create inside hidden items: 403 hidden
+// { hiddenItem: { kind, id, path }, title? (notes), hiddenAt, hiddenBy, reason,
+// locked (writes: the 423 details a lock would give as well, or null) }; hidden
+// wins over locked. People read and change hidden items as usual. Reads show
+// `hidden: { at, by, reason, inherited, from } | null` like `locked`; a hidden
+// folder in an API token's tree has folderCount, noteCount null, loaded false.
+// POST /notes/:id/hide, POST /folders/:id/hide  { reason? } (permission hide; a token
+//      must give a reason)  { kind, id, path, hidden, changed, message? } (changed false:
+//      hidden itself already, message says so); allowed on locked items; only notes
+//      and folders in use
+// POST /notes/:id/unhide, POST /folders/:id/unhide  { reason? } signed-in people only
+//      (API token: 403 forbidden { reason: "session_required" }), permission hide, the
+//      password re-entered within the last 10 minutes (else 403
+//      reauthentication_required): unhiding lets agents read it again. Lifts the item's
+//      own mark only (changed false: it had none); a lock stays
+// GET  /hidden                     { items: [{ kind, id, path, hiddenAt, hiddenBy, reason,
+//                                    coveredFolders, coveredNotes }] } signed-in people only
 //
 // The trash (permission delete): items stay TRASH_RETENTION_DAYS (default 28) days,
 // then the server purges them.
@@ -136,7 +198,7 @@ import { getTree } from "./tree";
 //
 // Errors: 400 validation { fields } (a missing field is "required", a blank
 // one "empty"); 401 unauthenticated | token_revoked |
-// token_expired; 403 forbidden | setup_token_present; 404 not_found |
+// token_expired; 403 forbidden | hidden | setup_token_present; 404 not_found |
 // folder_not_found | section_not_found; 409 version_conflict { currentVersion,
 // updatedAt, updatedBy, lastChange: { change, reason, sectionPath },
 // currentSection? } | title_taken { existingNoteId, path } | name_taken { existingFolderId, path } |
@@ -177,6 +239,16 @@ notesV1.patch("/folders/:id", patchFolder);
 notesV1.post("/folders/:id/move", postMoveFolder);
 notesV1.delete("/folders/:id", deleteFolderEndpoint);
 notesV1.post("/folders/:id/restore", postRestoreFolder);
+notesV1.post("/notes/:id/lock", postLockNote);
+notesV1.post("/notes/:id/unlock", postUnlockNote);
+notesV1.post("/folders/:id/lock", postLockFolder);
+notesV1.post("/folders/:id/unlock", postUnlockFolder);
+notesV1.get("/locked", getLocked);
+notesV1.post("/notes/:id/hide", postHideNote);
+notesV1.post("/notes/:id/unhide", postUnhideNote);
+notesV1.post("/folders/:id/hide", postHideFolder);
+notesV1.post("/folders/:id/unhide", postUnhideFolder);
+notesV1.get("/hidden", getHidden);
 notesV1.get("/trash", getTrash);
 notesV1.delete("/trash", deleteTrash);
 notesV1.delete("/trash/notes/:id", deleteTrashedNote);

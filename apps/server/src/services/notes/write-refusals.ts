@@ -3,7 +3,8 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { noteRevisions, notes } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
-import { type FolderIndex, joinPath } from "./folder-index";
+import type { AccessView } from "../access/access-view";
+import { joinPath } from "./folder-index";
 import type { NoteRow } from "./note-store";
 import { readSections } from "./note-store";
 import { refuse } from "./refusals";
@@ -61,11 +62,12 @@ function isTitleClash(error: unknown): boolean {
 
 // Runs `write` (which may give a note a title in a folder) in a savepoint.
 // When the folder's unique title index refuses it, the transaction goes on
-// and the answer is title_taken naming the note that holds the title; it lies
-// in the folder the caller is writing to, so the caller may see it.
+// and the answer is title_taken naming the note that holds the title. It lies
+// in the folder the caller is writing to, yet may be out of the caller's
+// reach (a note excluded on its own): then its id is not named.
 export async function guardTitle<T>(
   tx: Transaction,
-  index: FolderIndex,
+  view: AccessView,
   target: { folderId: string | null; title: string },
   write: (savepoint: Transaction) => Promise<T>,
 ): Promise<T | Failure> {
@@ -74,7 +76,7 @@ export async function guardTitle<T>(
   } catch (error) {
     if (!isTitleClash(error)) throw error;
     const [holder] = await tx
-      .select({ id: notes.id, title: notes.title })
+      .select({ id: notes.id, title: notes.title, folderId: notes.folderId })
       .from(notes)
       .where(
         and(
@@ -85,8 +87,8 @@ export async function guardTitle<T>(
       );
     if (!holder) return refuse("title_taken");
     const details: TitleTakenDetails = {
-      existingNoteId: holder.id,
-      path: joinPath(index.pathOf(target.folderId), holder.title),
+      existingNoteId: view.shownNoteId(holder),
+      path: joinPath(view.index.pathOf(target.folderId), holder.title),
     };
     return refuse("title_taken", { ...details });
   }

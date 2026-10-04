@@ -6,13 +6,13 @@ import { folders } from "../../db/schema";
 import type { Failure, Outcome } from "../../lib/outcome";
 import { uuidv7 } from "../../lib/uuid";
 import type { AccessRef } from "../access/access";
-import { type Grant, requireFolder } from "../access/authorize";
+import { chainRefusal, type Grant, placeRefusal } from "../access/authorize";
+import { folderChainRefusal } from "../locks/lock-guard";
 import type { NoteRef } from "../notes/addressing";
-import { loadFolderIndex } from "../notes/folder-index";
 import { writeNote } from "../notes/note-write";
 import { refuse } from "../notes/refusals";
 import { purgeAt } from "./retention";
-import { inTrashScope, OUT_OF_TRASH, trashMark, trashScope } from "./trash-store";
+import { OUT_OF_TRASH, trashMark } from "./trash-store";
 
 // A single note into the trash and back. Each is a new version of the note
 // with its revision ("deleted", "restored"), written like every other note
@@ -60,8 +60,9 @@ export async function trashNote(
 // The folder something comes back into (null: the root level): in use and
 // kept so until the transaction ends (share lock). A folder in the trash is
 // refused with parent_in_trash naming it, when the caller may see it there.
-// `requireVisible`: the folder must also lie in the caller's folders (a
-// restored note); a restored folder is checked on itself instead.
+// `requireVisible`: the caller must also hold delete on the folder (a
+// restored note); a restored folder is checked on itself instead. An agent
+// cannot restore anything into a locked folder.
 export async function lockRestoreTarget(
   tx: Transaction,
   grant: Grant,
@@ -76,12 +77,19 @@ export async function lockRestoreTarget(
       .for("share");
     if (!folder) return refuse("folder_not_found");
     if (folder.deletedAt) {
-      if (!inTrashScope(await trashScope(tx, grant), folderId)) return refuse("folder_not_found");
-      const index = await loadFolderIndex(tx, true);
-      return refuse("parent_in_trash", { folderId, path: index.pathOf(folderId) });
+      const view = await grant.trashView();
+      if (!view.seesFolder(folderId)) return refuse("folder_not_found");
+      return refuse("parent_in_trash", { folderId, path: view.index.pathOf(folderId) });
     }
   }
-  return requireVisible ? requireFolder(grant, folderId) : null;
+  return (
+    (requireVisible ? placeRefusal(grant.view, folderId, "delete") : null) ??
+    folderChainRefusal(tx, grant, folderId, grant.view, (chain, hidden) =>
+      requireVisible
+        ? chainRefusal(grant.access.policy, { kind: "place" }, chain, hidden, "delete")
+        : null,
+    )
+  );
 }
 
 // Back from the trash: into the folder it was deleted from, or into

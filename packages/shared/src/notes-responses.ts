@@ -1,3 +1,5 @@
+import type { HiddenState } from "./hidden.ts";
+import type { LockState } from "./locks.ts";
 import type { NoteChange } from "./notes";
 
 // Shapes of the /api/notes/v1 answers (apps/server/src/api/notes/v1/index.ts).
@@ -10,6 +12,8 @@ import type { NoteChange } from "./notes";
 export interface NoteHeader {
   id: string;
   title: string;
+  // Null for the root level, and for a token when the folder lies outside
+  // what it can reach (a note listed on its own); folderPath still names it.
   folderId: string | null;
   folderPath: string;
   path: string;
@@ -18,6 +22,10 @@ export interface NoteHeader {
   createdBy: string;
   updatedAt: string;
   updatedBy: string;
+  // Null when neither the note nor a folder above it is locked.
+  locked: LockState | null;
+  // Null when neither the note nor a folder above it is hidden.
+  hidden: HiddenState | null;
 }
 
 export interface FullNote extends NoteHeader {
@@ -79,23 +87,38 @@ export interface TreeNote {
   // changed.
   updatedBy: string;
   lastChange: NoteChange;
+  locked: LockState | null;
+  hidden: HiddenState | null;
+  // Only for a note listed at the top of a listing because its own folder is
+  // not visible to the token (a single note on an allow_list).
+  folderPath?: string;
 }
 
 // A folder in a listing. Where the requested depth ends its contents are not
-// loaded: `loaded` is false and only the counts say what it holds.
+// loaded: `loaded` is false and only the counts say what it holds. A hidden
+// folder shown to an agent is never loaded and has no counts (null): what
+// lies below it does not exist for agents.
 export type TreeFolder = {
   id: string;
   name: string;
   path: string;
   // Subfolders and notes directly inside (notes visible to the caller).
-  folderCount: number;
-  noteCount: number;
+  folderCount: number | null;
+  noteCount: number | null;
+  locked: LockState | null;
+  hidden: HiddenState | null;
 } & ({ loaded: true; folders: TreeFolder[]; notes: TreeNote[] } | { loaded: false });
 
 export interface TreeResponse {
-  // The folder listed, or null for the root level (or, for a token limited
-  // to folders, the folders it may see).
-  folder: { id: string; name: string; path: string } | null;
+  // The folder listed, or null for the root level (for a token that cannot
+  // see the whole root level: the topmost folders and notes it may see).
+  folder: {
+    id: string;
+    name: string;
+    path: string;
+    locked: LockState | null;
+    hidden: HiddenState | null;
+  } | null;
   folders: TreeFolder[];
   notes: TreeNote[];
 }
@@ -133,18 +156,22 @@ export interface FolderResult {
   path: string;
 }
 
+// A hit in a note an agent cannot read (hidden) matched its title only: no
+// section (sectionPath and heading null), an empty snippet, and `hidden` set.
 export interface SearchHit {
   noteId: string;
   title: string;
+  // As in NoteHeader: null at the root level and for a folder out of reach.
   folderId: string | null;
   folderPath: string;
-  sectionPath: string;
+  sectionPath: string | null;
   // The section's heading as written, without match marks; "" for the text
   // before the first heading.
-  heading: string;
+  heading: string | null;
   // The section's text without its heading line, matches marked «like
   // this» (a phrase as one mark), "…" where text is left out.
   snippet: string;
+  hidden: HiddenState | null;
   version: number;
   // Relevance relative to the best hit of the same search: 1 for the best,
   // between 0 and 1 for the others, three decimals.
@@ -161,10 +188,15 @@ export interface ChangeEntry {
   changes: number;
   actorName: string;
   reason: string | null;
-  // The section the latest change edited (replace_section); null otherwise.
+  // The section the latest change edited (replace_section); null otherwise,
+  // and for agents when the note is hidden (headings are its content).
   sectionPath: string | null;
   changedAt: string;
   deleted: boolean;
+  // As in NoteHeader: null, or the lock or hidden mark of the note or of the
+  // nearest folder above it.
+  locked: LockState | null;
+  hidden: HiddenState | null;
 }
 
 export interface RevisionSummary {
@@ -185,7 +217,8 @@ export interface RevisionSummary {
   folderOutsideScope: boolean;
   // The one section a section-level edit changed, as its path was then
   // (shortened at the front to "… > " when very long); null for changes of
-  // the whole note and for revisions recorded before sections were tracked.
+  // the whole note and for revisions recorded before sections were tracked,
+  // and for agents when the note is hidden (headings are its content).
   sectionPath: string | null;
 }
 
@@ -208,15 +241,17 @@ export interface VersionConflictDetails {
   lastChange: { change: NoteChange; reason: string | null; sectionPath: string | null };
 }
 
-// Details of 409 title_taken: the note that holds the title.
+// Details of 409 title_taken: the note that holds the title. Its id is null
+// when that note lies out of the token's reach (excluded on its own).
 export interface TitleTakenDetails {
-  existingNoteId: string;
+  existingNoteId: string | null;
   path: string;
 }
 
-// Details of 409 name_taken: the folder in use that holds the name there.
+// Details of 409 name_taken: the folder in use that holds the name there. Its
+// id is null when that folder lies out of the token's reach.
 export interface NameTakenDetails {
-  existingFolderId: string;
+  existingFolderId: string | null;
   path: string;
 }
 

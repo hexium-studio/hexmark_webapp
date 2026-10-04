@@ -26,4 +26,8 @@ export const TOOL_ACTIONS: Record<keyof typeof MCP_TOOLS, AuditAction> = {
   list_trash: "read.trash",
   restore_note: "note.restored",
   restore_folder: "folder.restored",
+  lock_note: "note.locked",
+  lock_folder: "folder.locked",
+  hide_note: "note.hidden",
+  hide_folder: "folder.hidden",
 };

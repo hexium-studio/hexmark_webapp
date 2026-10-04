@@ -45,6 +45,17 @@ export const title = noteTitleSchema.describe(
 
 const code = (value: FieldErrorCode) => value;
 
+// Why something is locked: required for agents (people may leave it out).
+export const lockReason = z
+  .string({ error: requiredOr("invalid_type") })
+  .trim()
+  .min(1, code("empty"))
+  .max(REVISION_REASON_MAX_LENGTH, code("too_long"))
+  .describe(
+    `Why you lock it, one short sentence (max ${REVISION_REASON_MAX_LENGTH} characters). ` +
+      "Required: people see it next to the lock, and only they can lift it.",
+  );
+
 // A whole number in [min, max], with the field codes the HTTP API uses.
 export function wholeNumber(min: number, max: number) {
   return z
@@ -64,3 +75,14 @@ export function flag(text: string) {
     .optional()
     .describe(text);
 }
+
+// Why something is hidden: required for agents (people may leave it out).
+export const hideReason = z
+  .string({ error: requiredOr("invalid_type") })
+  .trim()
+  .min(1, code("empty"))
+  .max(REVISION_REASON_MAX_LENGTH, code("too_long"))
+  .describe(
+    `Why you hide it, one short sentence (max ${REVISION_REASON_MAX_LENGTH} characters). ` +
+      "Required: people see it next to the hidden item, and only they can unhide it.",
+  );

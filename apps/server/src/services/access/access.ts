@@ -1,11 +1,11 @@
-import type { NotePermission, UserRole } from "@hexmark/shared";
+import { type NotePermission, ROLE_PERMISSIONS, type UserRole } from "@hexmark/shared";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
-import { apiTokens, sessions, users } from "../../db/schema";
+import { type ApiToken, apiTokenEntries, apiTokens, sessions, users } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
 import { refuse } from "../notes/refusals";
 import { signInRefusal, signInRefusalFailure } from "../sessions/sign-in-policy";
-import { effectivePermissions } from "./note-permissions";
+import { type AccessPolicy, heldPermissions } from "./policy";
 
 // Who a request to the notes core acts for: a human's session (web app) or an
 // agent's API token. Every note operation starts its transaction with
@@ -33,13 +33,11 @@ export interface Access {
   userId: string;
   role: UserRole;
   actor: Actor;
-  // Role and token permissions intersected (note-permissions.ts).
-  permissions: NotePermission[];
-  // Token only: the token's own permissions as stored.
-  tokenPermissions: NotePermission[] | null;
-  // Token only: the folders it is limited to (with their subfolders); null
-  // means the whole wiki.
-  folderScope: string[] | null;
+  // What may be done where (policy.ts): the role for a session, the token's
+  // mode and entries intersected with the owner's role for a token.
+  policy: AccessPolicy;
+  // Everything held anywhere (policy.ts, heldPermissions).
+  permissions: readonly NotePermission[];
   // Session only: when the password was last re-entered, read from the
   // locked session row (sensitive actions check it, reauthentication.ts).
   reauthenticatedAt: Date | null;
@@ -69,11 +67,39 @@ async function lockSessionAccess(
     userId: row.userId,
     role: row.role,
     actor: { userId: row.userId, tokenId: null, name: row.username },
-    permissions: effectivePermissions(row.role, null),
-    tokenPermissions: null,
-    folderScope: null,
+    ...withPolicy({ mode: "all", granted: ROLE_PERMISSIONS[row.role] }),
     reauthenticatedAt: row.reauthenticatedAt,
   };
+}
+
+function withPolicy(policy: AccessPolicy) {
+  return { policy, permissions: heldPermissions(policy) };
+}
+
+// The token's policy from its row and its entries, read while the token's
+// row is locked: entries change only with that row locked for update
+// (services/api-tokens), so they are what the row says.
+async function tokenPolicy(
+  tx: Transaction,
+  token: ApiToken,
+  role: UserRole,
+): Promise<AccessPolicy> {
+  const rows = await tx.select().from(apiTokenEntries).where(eq(apiTokenEntries.tokenId, token.id));
+  const granted = ROLE_PERMISSIONS[role];
+  const target = (row: (typeof rows)[number]) => row.folderId ?? row.noteId ?? "";
+  const of = (kind: "folder" | "note") => rows.filter((row) => row.targetKind === kind);
+  if (token.accessMode === "deny_list") {
+    return {
+      mode: "deny_list",
+      granted,
+      base: token.basePermissions ?? [],
+      folders: new Set(of("folder").map(target)),
+      notes: new Set(of("note").map(target)),
+    };
+  }
+  const listed = (kind: "folder" | "note") =>
+    new Map(of(kind).map((row) => [target(row), row.permissions ?? []] as const));
+  return { mode: "allow_list", granted, folders: listed("folder"), notes: listed("note") };
 }
 
 async function lockTokenAccess(
@@ -96,9 +122,7 @@ async function lockTokenAccess(
     userId: token.userId,
     role,
     actor: { userId: null, tokenId: token.id, name: token.name },
-    permissions: effectivePermissions(role, token.permissions),
-    tokenPermissions: token.permissions,
-    folderScope: token.folderScope,
+    ...withPolicy(await tokenPolicy(tx, token, role)),
     reauthenticatedAt: null,
   };
 }

@@ -1,10 +1,10 @@
-import { canSeeFolder, type Grant } from "../access/authorize";
+import type { Grant } from "../access/authorize";
 import type { FolderIndex } from "./folder-index";
 
 // Folders named in an answer that the caller did not choose: the folder a
-// revision was in, the parent of a folder. A token limited to folders learns
-// neither the id nor the path of a folder outside them; the answer says only
-// that it lies outside. Whether it does is canSeeFolder's decision.
+// revision was in, the parent of a folder. A token learns neither the id nor
+// the path of a folder it cannot see; the answer says only that it lies
+// outside. Whether it can is the access view's decision (services/access).
 
 export interface ShownFolder {
   folderId: string | null;
@@ -15,7 +15,7 @@ export interface ShownFolder {
 }
 
 export function showFolder(grant: Grant, index: FolderIndex, folderId: string | null): ShownFolder {
-  if (!canSeeFolder(grant, folderId)) {
+  if (!grant.view.seesFolder(folderId)) {
     return { folderId: null, folderPath: null, folderOutsideScope: true };
   }
   const gone = folderId !== null && index.get(folderId) === undefined;
@@ -27,7 +27,7 @@ export function showParent(
   grant: Grant,
   parentId: string | null,
 ): { parentId: string | null; parentOutsideScope: boolean } {
-  return canSeeFolder(grant, parentId)
+  return grant.view.seesFolder(parentId)
     ? { parentId, parentOutsideScope: false }
     : { parentId: null, parentOutsideScope: true };
 }

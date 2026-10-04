@@ -1,9 +1,16 @@
 import { z } from "zod";
+import {
+  type ApiTokenAccessMode,
+  type ApiTokenEntryInfo,
+  accessModeSchema,
+  permissionSetSchema,
+  tokenEntriesSchema,
+} from "./api-token-access";
 import { type FieldErrorCode, requiredOr } from "./field-errors";
-import { idSchema, NOTE_PERMISSIONS, type NotePermission } from "./notes";
+import type { NotePermission } from "./notes";
 
 // API tokens for agents: format, the input of POST /api/tokens/v1/tokens and
-// the shapes of the answers (apps/server/src/api/tokens/v1/index.ts).
+// PATCH, and the shapes of the answers (apps/server/src/api/tokens/v1/index.ts).
 
 // "hmk_" + 32 random bytes as base64url without padding.
 export const API_TOKEN_PREFIX = "hmk_";
@@ -27,39 +34,43 @@ export const apiTokenNameSchema = z
   // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it refuses
   .refine((name) => !/[\u0000-\u001f\u007f]/.test(name), { message: code("invalid_format") });
 
-export const notePermissionSchema = z.enum(NOTE_PERMISSIONS, { error: code("invalid_option") });
+// ISO 8601 with a time zone; null: never expires.
+const expirySchema = z.iso
+  .datetime({ offset: true, error: code("invalid_format") })
+  .nullable()
+  .transform((value) => (value ? new Date(value) : null));
 
+// POST /api/tokens/v1/tokens. The mode has no default: it decides what the
+// token can reach, so it is chosen every time (api-token-access.ts).
 export const createApiTokenInputSchema = z.object({
   name: apiTokenNameSchema,
-  permissions: z
-    .array(notePermissionSchema, { error: requiredOr("invalid_type") })
-    .min(1, code("required"))
-    .transform((list) => NOTE_PERMISSIONS.filter((permission) => list.includes(permission))),
-  // Null or missing: the whole wiki; otherwise these folders and their subfolders.
-  folderScope: z
-    .array(idSchema, { error: code("invalid_type") })
-    .min(1, code("required"))
-    .max(100, code("too_long"))
-    .transform((list) => [...new Set(list)])
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
-  // ISO 8601 with a time zone; null or missing: never expires.
-  expiresAt: z.iso
-    .datetime({ offset: true, error: code("invalid_format") })
-    .nullable()
-    .optional()
-    .transform((value) => (value ? new Date(value) : null)),
+  mode: accessModeSchema,
+  // deny_list only: the permissions for everything not excluded.
+  basePermissions: permissionSetSchema.nullable().optional(),
+  entries: tokenEntriesSchema.optional().transform((list) => list ?? []),
+  expiresAt: expirySchema.optional().transform((value) => value ?? null),
 });
 export type CreateApiTokenInput = z.infer<typeof createApiTokenInputSchema>;
+
+// PATCH /api/tokens/v1/tokens/:id. Left out: unchanged. `entries` replaces
+// the whole list; a new mode needs the new list (and, for deny_list, the
+// base permissions) in the same request.
+export const updateApiTokenInputSchema = z.object({
+  mode: accessModeSchema.optional(),
+  basePermissions: permissionSetSchema.nullable().optional(),
+  entries: tokenEntriesSchema.optional(),
+  expiresAt: expirySchema.optional(),
+});
+export type UpdateApiTokenInput = z.infer<typeof updateApiTokenInputSchema>;
 
 export interface ApiTokenInfo {
   id: string;
   name: string;
   prefix: string;
-  permissions: NotePermission[];
-  // Null: the whole wiki.
-  folderScope: { id: string; path: string | null }[] | null;
+  mode: ApiTokenAccessMode;
+  // deny_list: the permissions for everything not excluded; null for allow_list.
+  basePermissions: NotePermission[] | null;
+  entries: ApiTokenEntryInfo[];
   expiresAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;

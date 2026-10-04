@@ -26,6 +26,8 @@ const STATUS: Record<NoteErrorCode, ContentfulStatusCode> = {
   in_trash: 409,
   folder_in_trash: 409,
   parent_in_trash: 409,
+  locked: 423,
+  hidden: 403,
   payload_too_large: 413,
   database_unavailable: 503,
   server_not_configured: 503,

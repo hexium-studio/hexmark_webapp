@@ -19,6 +19,8 @@ import {
   WRITE_RESULT,
   write,
 } from "./openapi-common";
+import { HIDDEN_ROUTES } from "./openapi-hidden";
+import { LOCK_ROUTES } from "./openapi-locks";
 import { FOLDER_ROUTES, TRASH_ROUTES } from "./openapi-trash";
 
 // GET /api/notes/v1/openapi.json – the OpenAPI 3.1 document of this module,
@@ -114,6 +116,8 @@ const ROUTES: RouteDoc[] = [
   },
   ...FOLDER_ROUTES,
   ...TRASH_ROUTES,
+  ...LOCK_ROUTES,
+  ...HIDDEN_ROUTES,
 ];
 
 let cached: unknown;

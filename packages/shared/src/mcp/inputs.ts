@@ -18,6 +18,8 @@ import {
   expectedVersion,
   flag,
   folderReason,
+  hideReason,
+  lockReason,
   note,
   reason,
   section,
@@ -165,6 +167,20 @@ export const mcpToolInputs = {
     version: versionSchema.describe("The version to read, from list_revisions."),
   },
   ...trashToolInputs,
+  lock_note: { note, reason: lockReason },
+  lock_folder: {
+    folder_id: idSchema.describe(
+      "The folder to lock, with everything below it (also what is created there later).",
+    ),
+    reason: lockReason,
+  },
+  hide_note: { note, reason: hideReason },
+  hide_folder: {
+    folder_id: idSchema.describe(
+      "The folder to hide, with everything below it (also what is created there later).",
+    ),
+    reason: hideReason,
+  },
 } as const;
 
 export type McpToolName = keyof typeof mcpToolInputs;

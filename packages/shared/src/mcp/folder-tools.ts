@@ -1,7 +1,7 @@
 import type { McpResultField, McpToolDefinition, McpToolError } from "./definition.ts";
 import { WRITE_EXAMPLES } from "./examples-write.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { FOLDER_IN_TRASH } from "./note-tools.ts";
+import { FOLDER_IN_TRASH, HIDDEN, LOCKED } from "./note-tools.ts";
 
 // Tools that create and change folders. Folders have no versions and keep no
 // history: a change takes no expected_version, its reason is recorded in the
@@ -53,6 +53,8 @@ export const createFolder = {
   defaults: {},
   result: folderResult("Always false here: the parent must be in your folders."),
   errors: [
+    HIDDEN,
+    LOCKED,
     ["folder_not_found", "The parent folder does not exist."],
     [
       FOLDER_IN_TRASH[0],
@@ -78,7 +80,7 @@ export const renameFolder = {
   input: input.rename_folder,
   defaults: {},
   result: folderResult(OUTSIDE),
-  errors: [...FOLDER_IN_USE, NAME_TAKEN],
+  errors: [HIDDEN, LOCKED, ...FOLDER_IN_USE, NAME_TAKEN],
   example: WRITE_EXAMPLES.rename_folder,
 } satisfies McpToolDefinition<typeof input.rename_folder>;
 
@@ -97,6 +99,8 @@ export const moveFolder = {
   defaults: {},
   result: folderResult(OUTSIDE),
   errors: [
+    HIDDEN,
+    LOCKED,
     ["folder_not_found", "folder_id or parent_id names no folder in use this token can see."],
     [
       FOLDER_IN_TRASH[0],

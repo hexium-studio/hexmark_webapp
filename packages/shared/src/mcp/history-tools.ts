@@ -1,7 +1,7 @@
 import type { McpToolDefinition } from "./definition.ts";
 import { NOTE_EXAMPLES } from "./examples-note.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { AMBIGUOUS_NOTE, IN_TRASH, NOTE_ADDRESS_ERRORS } from "./note-tools.ts";
+import { AMBIGUOUS_NOTE, HIDDEN_NOTE, IN_TRASH, NOTE_ADDRESS_ERRORS } from "./note-tools.ts";
 
 // Tools for a note's history: its versions and one of them in full.
 
@@ -51,7 +51,8 @@ export const listRevisions = {
       "revisions[].sectionPath",
       "string | null",
       "The section a replace_section changed, as its path was then; null for whole-note " +
-        "changes and for versions written before this was recorded.",
+        "changes, for versions written before this was recorded, and for a hidden note " +
+        "(headings are its content).",
     ],
   ],
   errors: NOTE_ADDRESS_ERRORS,
@@ -88,6 +89,7 @@ export const readRevision = {
     ["not_found", "No such note visible to this token, or the note has no such version."],
     AMBIGUOUS_NOTE,
     IN_TRASH,
+    HIDDEN_NOTE,
   ],
   example: NOTE_EXAMPLES.read_revision,
 } satisfies McpToolDefinition<typeof input.read_revision>;

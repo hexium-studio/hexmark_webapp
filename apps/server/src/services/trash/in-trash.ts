@@ -3,10 +3,11 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { folders, notes } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
+import type { AccessView } from "../access/access-view";
 import type { Grant } from "../access/authorize";
-import { type FolderIndex, joinPath, loadFolderIndex } from "../notes/folder-index";
+import { joinPath } from "../notes/folder-index";
 import { refuse } from "../notes/refusals";
-import { inTrashDetails, inTrashScope, trashScope } from "./trash-store";
+import { inTrashDetails } from "./trash-store";
 
 // A note or folder named by its id that is not in use may be in the trash. A
 // caller who may see it there learns so (in_trash, folder_in_trash, with
@@ -27,17 +28,17 @@ async function batchRootId(tx: Transaction, batchId: string): Promise<string | n
   return row?.id ?? null;
 }
 
-// The batch root, unless it is `itemId` itself or lies outside the scope.
+// The batch root, unless it is `itemId` itself or the caller cannot see it
+// (`view`: over all folders, also those in the trash).
 async function batchRootDetails(
   tx: Transaction,
-  scope: ReadonlySet<string> | null,
-  index: FolderIndex,
+  view: AccessView,
   batchId: string,
   itemId: string,
 ): Promise<BatchRootDetails> {
   const rootId = await batchRootId(tx, batchId);
-  if (rootId === null || rootId === itemId || !inTrashScope(scope, rootId)) return {};
-  return { batchRootId: rootId, batchRootPath: index.pathOf(rootId) };
+  if (rootId === null || rootId === itemId || !view.seesFolder(rootId)) return {};
+  return { batchRootId: rootId, batchRootPath: view.index.pathOf(rootId) };
 }
 
 export async function inTrashRefusal(
@@ -55,14 +56,13 @@ export async function inTrashRefusal(
     .from(notes)
     .where(and(eq(notes.id, id), isNotNull(notes.deletedAt)));
   if (!row?.deletedAt || !row.batchId) return null;
-  const scope = await trashScope(tx, grant);
-  if (!inTrashScope(scope, row.folderId)) return null;
-  const index = await loadFolderIndex(tx, true);
+  const view = await grant.trashView();
+  if (!view.seesNote({ id, folderId: row.folderId })) return null;
   const details: NoteInTrashDetails = {
     ...inTrashDetails(row.deletedAt),
     batchId: row.batchId,
-    path: joinPath(index.pathOf(row.folderId), row.title),
-    ...(await batchRootDetails(tx, scope, index, row.batchId, id)),
+    path: joinPath(view.index.pathOf(row.folderId), row.title),
+    ...(await batchRootDetails(tx, view, row.batchId, id)),
   };
   return refuse("in_trash", { ...details });
 }
@@ -78,15 +78,14 @@ export async function missingFolder(tx: Transaction, grant: Grant, id: string): 
     .from(folders)
     .where(and(eq(folders.id, id), isNotNull(folders.deletedAt)));
   if (!row?.deletedAt || !row.batchId) return refuse("folder_not_found");
-  const scope = await trashScope(tx, grant);
-  if (!inTrashScope(scope, id)) return refuse("folder_not_found");
-  const index = await loadFolderIndex(tx, true);
+  const view = await grant.trashView();
+  if (!view.seesFolder(id)) return refuse("folder_not_found");
   const details: FolderInTrashDetails = {
     folderId: id,
-    path: index.pathOf(id),
+    path: view.index.pathOf(id),
     ...inTrashDetails(row.deletedAt),
     batchId: row.batchId,
-    ...(await batchRootDetails(tx, scope, index, row.batchId, id)),
+    ...(await batchRootDetails(tx, view, row.batchId, id)),
   };
   return refuse("folder_in_trash", { ...details });
 }

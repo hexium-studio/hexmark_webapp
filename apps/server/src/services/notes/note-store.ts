@@ -3,7 +3,10 @@ import { and, eq, getTableColumns, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { type Note, noteRevisions, noteSections, notes } from "../../db/schema";
 import type { Actor } from "../access/access";
-import { type FolderIndex, joinPath } from "./folder-index";
+import type { AccessView } from "../access/access-view";
+import { noteHiddenState } from "../hidden/hidden-state";
+import { noteLockState } from "../locks/lock-state";
+import { joinPath } from "./folder-index";
 import { revisionSectionPath } from "./revision-section-path";
 import { type ParsedSection, parseSections } from "./sections";
 
@@ -41,12 +44,13 @@ export async function readLiveNote(tx: Transaction, id: string): Promise<NoteRow
   return row;
 }
 
-export function noteHeader(row: NoteRow, index: FolderIndex): NoteHeader {
-  const folderPath = index.pathOf(row.folderId);
+// `view`: the caller's access view, for the lock and hidden states.
+export function noteHeader(row: NoteRow, view: AccessView): NoteHeader {
+  const folderPath = view.index.pathOf(row.folderId);
   return {
     id: row.id,
     title: row.title,
-    folderId: row.folderId,
+    folderId: view.shownFolderId(row.folderId),
     folderPath,
     path: joinPath(folderPath, row.title),
     version: row.version,
@@ -54,6 +58,8 @@ export function noteHeader(row: NoteRow, index: FolderIndex): NoteHeader {
     createdBy: row.createdByName,
     updatedAt: row.updatedAt.toISOString(),
     updatedBy: row.updatedByName,
+    locked: noteLockState(view, row),
+    hidden: noteHiddenState(view, row),
   };
 }
 

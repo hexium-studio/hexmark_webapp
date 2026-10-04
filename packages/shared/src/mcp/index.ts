@@ -1,5 +1,7 @@
 import { createFolder, moveFolder, renameFolder } from "./folder-tools.ts";
+import { hideFolder, hideNote } from "./hide-tools.ts";
 import { listRevisions, readRevision } from "./history-tools.ts";
+import { lockFolder, lockNote } from "./lock-tools.ts";
 import { readNote, readOutline, readSection } from "./note-tools.ts";
 import { getOverview, listChanges, listFolder, searchNotes } from "./read-tools.ts";
 import { restoreFolder, restoreNote } from "./restore-tools.ts";
@@ -12,9 +14,10 @@ import { createNote, moveNote, replaceSection, updateNote } from "./write-tools.
 
 export * from "./definition.ts";
 export * from "./inputs.ts";
+export { ALREADY_LOCKED_MESSAGE } from "./lock-tools.ts";
 
 // By name, in the order docs/mcp.md lists them: orient, find and read,
-// history, write notes, folders, trash.
+// history, write notes, folders, trash, locks, hiding.
 export const MCP_TOOLS = {
   get_overview: getOverview,
   list_folder: listFolder,
@@ -37,4 +40,8 @@ export const MCP_TOOLS = {
   list_trash: listTrash,
   restore_note: restoreNote,
   restore_folder: restoreFolder,
+  lock_note: lockNote,
+  lock_folder: lockFolder,
+  hide_note: hideNote,
+  hide_folder: hideFolder,
 } as const;

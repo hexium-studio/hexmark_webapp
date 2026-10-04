@@ -71,6 +71,20 @@
       "when": 1791098895871,
       "tag": "0009_audit_events",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791106006447,
+      "tag": "0010_locks_and_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791109319570,
+      "tag": "0011_hidden",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import type { AuditActor } from "../audit/actor";
 import { type AuditItem, auditItemList } from "../audit/item-list";
 import { type AuditEventInput, recordEvents } from "../audit/record";
 import { type FolderIndex, joinPath, loadFolderIndex } from "../notes/folder-index";
+import { recordEntryRemovals } from "./entry-removal-events";
 import type { Removed } from "./trash-remove";
 
 // Deleting from the trash for good writes one audit event per note and per
@@ -15,7 +16,8 @@ import type { Removed } from "./trash-remove";
 // removed with what was below it (the topmost such folder of the run: the
 // folder deleted for good, or a purged folder batch) lists those items in
 // its details (item-list.ts, capped) with their counts; each of those
-// items names it as viaFolder.
+// items names it as viaFolder. API token entries removed with an item are
+// logged as well (entry-removal-events.ts).
 
 export interface RemovalLog {
   actor: AuditActor;
@@ -63,6 +65,7 @@ export async function recordRemovals(
       path: joinPath(index.pathOf(item.parent_id), item.name),
       batchId: item.trash_batch_id,
       root: removalRoot(index, removedFolders, item.parent_id),
+      entries: item.entries ?? [],
     })),
     ...removed.folders.map((item) => ({
       kind: "folder" as const,
@@ -70,6 +73,7 @@ export async function recordRemovals(
       path: index.pathOf(item.id),
       batchId: item.trash_batch_id,
       root: removalRoot(index, removedFolders, item.parent_id),
+      entries: item.entries ?? [],
     })),
   ];
   const byRoot = new Map<string, AuditItem[]>();
@@ -99,6 +103,7 @@ export async function recordRemovals(
     };
   });
   await recordEvents(tx, events, now);
+  await recordEntryRemovals(tx, items, { runId, via: log.via }, now);
   return runId;
 }
 

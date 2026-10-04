@@ -2,23 +2,34 @@ import { INTRODUCTION_SECTION_PATH } from "@hexmark/shared";
 import { sectionTokenBudget } from "../config/notes";
 import { trashRetentionDays } from "../config/trash";
 import type { AccessDescription } from "../services/access/describe";
+import { HIDDEN_GUIDE, HIDDEN_INSTRUCTION } from "./guide-hidden";
 
 // What every connecting agent is told: the server instructions sent with
 // `initialize`, and the longer guide behind the resource hexmark://guide.
-// Both include the permissions of the token in use.
+// Both include the access of the token in use. Hidden items: guide-hidden.ts.
 
 export const GUIDE_URI = "hexmark://guide";
 
-function permissionsLine(access: AccessDescription): string {
-  const scope = access.folderScope
-    ? `limited to these folders and their subfolders: ${access.folderScope
-        .map((folder) => `"${folder.path}" (${folder.id})`)
-        .join(", ")}`
-    : "the whole wiki";
+function accessLine(access: AccessDescription): string {
+  const held = access.permissions.join(", ") || "(none)";
+  if (access.mode !== "allow_list") {
+    return `on the whole wiki as far as it can see it, including new content (${held}).`;
+  }
+  const entries = (access.entries ?? [])
+    .map((entry) => {
+      const what = entry.kind === "folder" ? "folder" : "note";
+      const trash = entry.inTrash ? ", in the trash" : "";
+      return `${what} "${entry.path}" (${entry.id}${trash}): ${entry.permissions.join(", ")}`;
+    })
+    .join("; ");
   return (
-    `This token acts as "${access.actorName}" with the permissions ` +
-    `${access.permissions.join(", ") || "(none)"} on ${scope}.`
+    "only on these targets (a folder with everything below it, also what is created there " +
+    `later): ${entries || "(none)"}. Nothing can be created at the root level.`
   );
+}
+
+function permissionsLine(access: AccessDescription): string {
+  return `This token acts as "${access.actorName}" with access ${accessLine(access)}`;
 }
 
 // The retention is this server's setting (TRASH_RETENTION_DAYS).
@@ -40,6 +51,9 @@ export function serverInstructions(access: AccessDescription): string {
       "short reason. A version_conflict means someone changed the note: read it again, " +
       "merge, retry.",
     trashLine(),
+    "Locked notes and folders (locked in reads) cannot be changed by agents; only people " +
+      "unlock. lock_note and lock_folder lock with a reason.",
+    HIDDEN_INSTRUCTION,
     `Read ${GUIDE_URI} for the details.`,
   ].join("\n");
 }
@@ -103,8 +117,39 @@ a word. Each hit gives the sectionPath for read_section, the section's heading a
   is written, its reason is dropped, and a message says so.
 - replace_section adds a blank line at the end of your text when a heading follows and
   the text does not end with one; nothing else of the text is changed.
-- Locking comes in a later version: the lock permission has no tool yet.
 
+## Access
+- A token has one of two access modes. allow_list: it reaches only the listed folders
+  (with everything below them, also later additions) and notes, each with its own
+  permissions; the root level is not reachable, so nothing can be created there.
+  deny_list: it reaches the whole wiki with one set of permissions, except what it
+  cannot see; new content is reachable automatically.
+- What a token cannot reach does not exist for it: not_found, folder_not_found, never
+  listed, never found by search. Writing into such a folder (or the root level of an
+  allow list) answers forbidden with reason outside_scope; an item it sees but lacks the
+  permission for answers forbidden with the permission. Paths show the names of the
+  folders above an item even when the token cannot open those folders, but never their
+  ids: folderId (and any other id of such a folder) is null.
+- delete_folder and restore_folder take everything inside along. A folder holding notes
+  or folders outside your reach answers forbidden with reason hidden_content (they are
+  not named); one holding a hidden note or folder answers hidden instead (see Hidden).
+- A note listed on its own is found by search when the token may read it.
+
+## Locks
+- Reads show \`locked\` on notes and folders: null, or who locked it, when, why, and
+  whether a folder above holds the lock (inherited, from).
+- A locked note or folder, and everything below a locked folder (also what is created there
+  later), cannot be changed by agents: update_note, replace_section, move_note, rename,
+  move, delete, restore and creating inside it answer locked with lockedItem (the note or
+  folder holding the lock), lockedAt, lockedBy and reason. Reading is not affected.
+- With the lock permission you may lock: lock_note and lock_folder, always with a reason.
+  Locking an item that holds a lock already answers changed: false with a message;
+  locking one inside a locked folder answers locked with alreadyLocked: true and that
+  folder as lockedItem - it is locked already, nothing needs to be done. You cannot
+  unlock: only people can, and people may still change locked items. Lock what should
+  stay as it is, and say why.
+
+${HIDDEN_GUIDE}
 ## Trash
 ${trashLine()}
 - delete_note (with expected_version) and delete_folder take a reason. A folder goes to
@@ -131,11 +176,14 @@ can read it, agents cannot.
 
 ## Errors
 Tool errors carry a code (e.g. not_found, forbidden, version_conflict, title_taken,
-ambiguous_note, section_not_found) and a short message. forbidden names the missing
-permission, or reason "outside_scope" for a folder this token cannot reach.
+ambiguous_note, section_not_found, locked, hidden) and a short message. forbidden names the missing
+permission, or reason "outside_scope" for a folder this token cannot reach (also the root
+level on an allow list, whatever it holds), or "hidden_content" for a folder to delete or
+restore holding items outside its reach (a hidden item inside answers hidden instead).
 invalid_input means an argument breaks its rule: fields.<name>.rule says which
 ("title must not be empty"). title_taken names the note that has the title
-(existingNoteId), name_taken the folder that has the name (existingFolderId);
+(existingNoteId), name_taken the folder that has the name (existingFolderId; either id is
+null when that note or folder is outside your reach);
 version_conflict says what the newer version changed (lastChange).
 `;
 }

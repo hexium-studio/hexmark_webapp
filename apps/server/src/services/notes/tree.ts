@@ -1,23 +1,27 @@
 import type { TreeFolder, TreeNote, TreeResponse } from "@hexmark/shared";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, type SQL, sql } from "drizzle-orm";
 import { noteRevisions, notes } from "../../db/schema";
-import type { Outcome } from "../../lib/outcome";
-import type { AccessRef } from "../access/access";
-import { canSeeFolder, visibleFolderSql } from "../access/authorize";
-import { missingFolder } from "../trash/in-trash";
+import { folderHiddenState, noteHiddenState } from "../hidden/hidden-state";
+import { isAgent } from "../locks/lock-guard";
+import { folderLockState, noteLockState } from "../locks/lock-state";
 import type { FolderEntry } from "./folder-index";
-import { type ReadContext, withRead } from "./read-frame";
-import { refuse } from "./refusals";
+import type { ReadContext } from "./read-frame";
 
 // The folder tree with note titles (no bodies), from a folder or the root
 // level down to `depth` levels: depth 1 lists the folder's subfolders and
 // notes, each further level opens the subfolders one more step. A folder
 // where the depth ends is listed with loaded: false and its counts only.
+// Only what the caller may read is listed and counted. A caller that cannot
+// read the root level (an allow_list token) gets, at the top, the folders
+// and notes it may read whose folder it cannot. A hidden folder is shown to
+// an agent without contents or counts (nothing below it exists for it);
+// listing it is refused (tree-listing.ts).
 
-async function notesIn(context: ReadContext, folderIds: (string | null)[]) {
-  const ids = folderIds.filter((id): id is string => id !== null);
-  const includeRoot = folderIds.includes(null);
-  const rows = await context.tx
+const readable = (context: ReadContext) =>
+  context.grant.view.noteSql("read", notes.id, notes.folderId);
+
+async function noteRows(context: ReadContext, where: SQL) {
+  return context.tx
     .select({
       id: notes.id,
       title: notes.title,
@@ -27,38 +31,56 @@ async function notesIn(context: ReadContext, folderIds: (string | null)[]) {
       // What the current version changed (its revision).
       lastChange: noteRevisions.change,
       folderId: notes.folderId,
+      lockedAt: notes.lockedAt,
+      lockedByName: notes.lockedByName,
+      lockReason: notes.lockReason,
+      hiddenAt: notes.hiddenAt,
+      hiddenByName: notes.hiddenByName,
+      hideReason: notes.hideReason,
     })
     .from(notes)
     .leftJoin(
       noteRevisions,
       and(eq(noteRevisions.noteId, notes.id), eq(noteRevisions.version, notes.version)),
     )
-    .where(
-      and(
-        isNull(notes.deletedAt),
-        visibleFolderSql(context.grant, notes.folderId),
-        sql`(${notes.folderId} = any(${sql.param(ids)}::uuid[]) or (${includeRoot} and ${notes.folderId} is null))`,
-      ),
-    )
+    .where(and(isNull(notes.deletedAt), readable(context), where))
     .orderBy(asc(sql`lower(${notes.title})`));
+}
+
+type NoteRowOf = Awaited<ReturnType<typeof noteRows>>[number];
+
+function treeNote(context: ReadContext, row: NoteRowOf, detached: boolean): TreeNote {
+  return {
+    id: row.id,
+    title: row.title,
+    version: row.version,
+    updatedAt: row.updatedAt.toISOString(),
+    updatedBy: row.updatedBy,
+    // Every version has its revision; the fallback only keeps the shape.
+    lastChange: row.lastChange ?? "edited",
+    locked: noteLockState(context.grant.view, row),
+    hidden: noteHiddenState(context.grant.view, row),
+    ...(detached ? { folderPath: context.index.pathOf(row.folderId) } : {}),
+  };
+}
+
+async function notesIn(context: ReadContext, folderIds: (string | null)[]) {
+  const ids = folderIds.filter((id): id is string => id !== null);
+  const includeRoot = folderIds.includes(null);
+  const rows = await noteRows(
+    context,
+    sql`(${notes.folderId} = any(${sql.param(ids)}::uuid[]) or (${includeRoot} and ${notes.folderId} is null))`,
+  );
   const byFolder = new Map<string | null, TreeNote[]>();
   for (const row of rows) {
     const list = byFolder.get(row.folderId) ?? [];
-    list.push({
-      id: row.id,
-      title: row.title,
-      version: row.version,
-      updatedAt: row.updatedAt.toISOString(),
-      updatedBy: row.updatedBy,
-      // Every version has its revision; the fallback only keeps the shape.
-      lastChange: row.lastChange ?? "edited",
-    });
+    list.push(treeNote(context, row, false));
     byFolder.set(row.folderId, list);
   }
   return byFolder;
 }
 
-// Visible notes per folder, for folders whose notes are not listed.
+// Readable notes per folder, for folders whose notes are not listed.
 async function noteCounts(context: ReadContext, folderIds: string[]) {
   const counts = new Map<string, number>();
   if (folderIds.length === 0) return counts;
@@ -68,7 +90,7 @@ async function noteCounts(context: ReadContext, folderIds: string[]) {
     .where(
       and(
         isNull(notes.deletedAt),
-        visibleFolderSql(context.grant, notes.folderId),
+        readable(context),
         sql`${notes.folderId} = any(${sql.param(folderIds)}::uuid[])`,
       ),
     )
@@ -77,16 +99,33 @@ async function noteCounts(context: ReadContext, folderIds: string[]) {
   return counts;
 }
 
-// Top entries: the folder's children, or at the root level for a token
-// limited to folders, its visible folders whose parent it cannot see.
+function childrenOf(context: ReadContext, folderId: string | null): FolderEntry[] {
+  const { view } = context.grant;
+  return context.index.children(folderId).filter((entry) => view.seesFolder(entry.id, "read"));
+}
+
+// Top entries: the folder's readable children; at the root level for a
+// caller that cannot read it, the readable folders whose parent it cannot.
 function topFolders(context: ReadContext, folderId: string | null): FolderEntry[] {
   const { grant, index } = context;
-  if (folderId !== null || grant.scope === null) return index.children(folderId);
-  return [...grant.scope]
+  if (folderId !== null || grant.view.seesFolder(null, "read"))
+    return childrenOf(context, folderId);
+  return (grant.view.folderIds("read") ?? [])
     .map((id) => index.get(id))
     .filter((entry): entry is FolderEntry => entry !== undefined)
-    .filter((entry) => !canSeeFolder(grant, entry.parentId))
+    .filter((entry) => !grant.view.seesFolder(entry.parentId, "read"))
     .sort((a, b) => index.pathOf(a.id).localeCompare(index.pathOf(b.id)));
+}
+
+// Notes readable on their own (a single note on an allow_list) whose folder
+// the caller cannot read: listed at the top, with their folder's path.
+async function detachedNotes(context: ReadContext): Promise<TreeNote[]> {
+  const folders = context.grant.view.folderIds("read") ?? [];
+  const rows = await noteRows(
+    context,
+    sql`(${notes.folderId} is null or not ${notes.folderId} = any(${sql.param(folders)}::uuid[]))`,
+  );
+  return rows.map((row) => treeNote(context, row, true));
 }
 
 export async function buildTree(
@@ -94,31 +133,40 @@ export async function buildTree(
   folderId: string | null,
   depth: number,
 ): Promise<TreeResponse> {
-  const { index } = context;
+  const { index, grant } = context;
   // Folders whose contents are listed, level by level.
   const opened: (string | null)[] = [folderId];
   const levels: FolderEntry[][] = [topFolders(context, folderId)];
   for (let level = 1; level < depth; level++) {
     const previous = levels[level - 1] ?? [];
     opened.push(...previous.map((entry) => entry.id));
-    levels.push(previous.flatMap((entry) => index.children(entry.id)));
+    levels.push(previous.flatMap((entry) => childrenOf(context, entry.id)));
   }
   const byFolder = await notesIn(context, opened);
   const counted = await noteCounts(
     context,
     (levels[depth - 1] ?? []).map((entry) => entry.id),
   );
+  const agent = isAgent(grant);
   const describe = (entry: FolderEntry, level: number): TreeFolder => {
-    const children = index.children(entry.id);
-    const base = { id: entry.id, name: entry.name, path: index.pathOf(entry.id) };
+    const children = childrenOf(context, entry.id);
+    const base = {
+      id: entry.id,
+      name: entry.name,
+      path: index.pathOf(entry.id),
+      folderCount: children.length,
+      locked: folderLockState(grant.view, entry.id),
+      hidden: folderHiddenState(grant.view, entry.id),
+    };
+    if (agent && entry.hidden) {
+      return { ...base, folderCount: null, noteCount: null, loaded: false };
+    }
     if (level + 1 >= depth) {
-      const noteCount = counted.get(entry.id) ?? 0;
-      return { ...base, folderCount: children.length, noteCount, loaded: false };
+      return { ...base, noteCount: counted.get(entry.id) ?? 0, loaded: false };
     }
     const folderNotes = byFolder.get(entry.id) ?? [];
     return {
       ...base,
-      folderCount: children.length,
       noteCount: folderNotes.length,
       loaded: true,
       folders: children.map((child) => describe(child, level + 1)),
@@ -126,32 +174,21 @@ export async function buildTree(
     };
   };
   const folder = folderId === null ? null : index.get(folderId);
+  const top =
+    folderId === null && !grant.view.seesFolder(null, "read")
+      ? await detachedNotes(context)
+      : (byFolder.get(folderId) ?? []);
   return {
-    folder: folder ? { id: folder.id, name: folder.name, path: index.pathOf(folder.id) } : null,
+    folder: folder
+      ? {
+          id: folder.id,
+          name: folder.name,
+          path: index.pathOf(folder.id),
+          locked: folderLockState(grant.view, folder.id),
+          hidden: folderHiddenState(grant.view, folder.id),
+        }
+      : null,
     folders: (levels[0] ?? []).map((entry) => describe(entry, 0)),
-    notes: byFolder.get(folderId) ?? [],
+    notes: top,
   };
-}
-
-export function listTree(
-  ref: AccessRef,
-  now: Date,
-  input: { folderId: string | null; depth: number },
-): Promise<Outcome<TreeResponse>> {
-  const request = { ref, now, permission: "read", action: "read.folder", input } as const;
-  return withRead(
-    request,
-    async (context) => {
-      if (input.folderId !== null) {
-        const known = context.index.get(input.folderId);
-        if (!known) return missingFolder(context.tx, context.grant, input.folderId);
-        if (!canSeeFolder(context.grant, known.id)) return refuse("folder_not_found");
-      }
-      return buildTree(context, input.folderId, input.depth);
-    },
-    (tree) => ({
-      target: tree.folder ? { kind: "folder", id: tree.folder.id, label: tree.folder.path } : null,
-      details: { folderCount: tree.folders.length, noteCount: tree.notes.length },
-    }),
-  );
 }

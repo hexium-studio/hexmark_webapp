@@ -2,13 +2,20 @@ import type { TrashedFolder } from "@hexmark/shared";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { trashRetentionDays } from "../../config/trash";
 import type { Transaction } from "../../db/client";
-import { folders } from "../../db/schema";
+import { folders, notes } from "../../db/schema";
 import type { Outcome } from "../../lib/outcome";
 import { uuidv7 } from "../../lib/uuid";
 import type { AccessRef } from "../access/access";
-import { authorize, requireFolder } from "../access/authorize";
+import { AccessView } from "../access/access-view";
+import { authorize, chainRefusal, folderRefusal } from "../access/authorize";
 import { recordAccessEvent, recordAccessEvents } from "../audit/access-events";
 import { runAudited } from "../audit/audited";
+import { folderChainRefusal } from "../locks/lock-guard";
+import {
+  hiddenContentRefusal,
+  subtreeHiddenRefusal,
+  subtreeLockRefusal,
+} from "../locks/subtree-guard";
 import { isUuid } from "../notes/addressing";
 import { folderSubtreeIds, loadFolderIndex } from "../notes/folder-index";
 import { serializeFolderTree } from "../notes/folders";
@@ -24,7 +31,8 @@ import { markNotes, trashMark } from "./trash-store";
 // the trash already keeps its own batch. Every note taken along gets a new
 // version with a "deleted" revision carrying the reason. The audit log gets
 // the folder's event with the items of the batch and one event per item
-// (batch-events.ts).
+// (batch-events.ts). An agent cannot take along what is hidden, what it
+// cannot see or what is locked (locks/subtree-guard.ts).
 
 // Locks the folder's subtree (folders in use) for update and returns its ids.
 // Under the tree lock no folder moves in or out, but a subfolder may still be
@@ -65,10 +73,24 @@ export function trashFolder(
       .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
       .for("update");
     if (!row) return missingFolder(tx, grant, id);
-    if (requireFolder(grant, row.id)) return refuse("folder_not_found");
+    const refused =
+      folderRefusal(grant.view, row.id, "delete") ??
+      (await folderChainRefusal(tx, grant, id, grant.view, (chain, hidden) =>
+        chainRefusal(grant.access.policy, { kind: "folder" }, chain, hidden, "delete"),
+      ));
+    if (refused) return refused;
     const ids = await lockSubtree(tx, id);
+    // The tree as it is under the tree lock, for what the batch takes along.
+    const view = new AccessView(grant.access.policy, await loadFolderIndex(tx));
+    const liveNotes = sql`${notes.folderId} = any(${sql.param(ids)}::uuid[]) and ${notes.deletedAt} is null`;
+    // Hiding a note takes a share lock on its folders (hide-change.ts), so
+    // with the subtree locked its hidden marks are current here.
+    const unseen =
+      (await subtreeHiddenRefusal(tx, grant, view, ids, liveNotes)) ??
+      (await hiddenContentRefusal(tx, grant, view, ids, liveNotes));
+    if (unseen) return unseen;
     // Paths as they were, before the folders leave the index of folders in use.
-    const index = await loadFolderIndex(tx);
+    const { index } = view;
     const path = index.pathOf(id);
     const { actor } = grant.access;
     const batchId = uuidv7();
@@ -86,6 +108,14 @@ export function trashFolder(
       actor,
       now,
     );
+    const locked = await subtreeLockRefusal(
+      tx,
+      grant,
+      view,
+      ids,
+      sql`${notes.trashBatchId} = ${batchId}::uuid`,
+    );
+    if (locked) return locked;
     const folderCount = ids.length - 1;
     const noteCount = marked.length;
     const members = {

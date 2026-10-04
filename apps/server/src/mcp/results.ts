@@ -18,7 +18,11 @@ const MESSAGES: Record<Exclude<McpErrorCode, "invalid_input">, string> = {
   token_revoked: "The API token was revoked; ask the user for a new one.",
   token_expired: "The API token has expired; ask the user for a new one.",
   setup_token_present: "The server is not ready: its setup token is still set.",
-  forbidden: "This token is not allowed to do that (see permission or reason).",
+  forbidden:
+    "This token is not allowed to do that: permission names the one it lacks there; reason " +
+    "outside_scope: the target folder (or the root level) is outside what it can reach; " +
+    "reason hidden_content: the folder to delete or restore holds items outside what it " +
+    "can reach (a hidden item inside answers hidden instead).",
   not_found: "No such note (or revision) visible to this token.",
   folder_not_found: "No such folder visible to this token.",
   section_not_found: "The note has no such section; paths lists the ones it has.",
@@ -52,6 +56,15 @@ const MESSAGES: Record<Exclude<McpErrorCode, "invalid_input">, string> = {
   parent_in_trash:
     "The folder it would come back into is in the trash too (folderId, path). Restore that " +
     "folder first with restore_folder, or pass folder_id to restore_note to put it elsewhere.",
+  locked:
+    "It is locked (lockedItem: the note or folder holding the lock, lockedAt, lockedBy, " +
+    "reason): agents cannot change, move, rename, delete, restore or create inside it. " +
+    "Reading is fine. Only a person can unlock it.",
+  hidden:
+    "It is hidden from agents (hiddenItem: the note or folder, hiddenAt, hiddenBy, reason): " +
+    "agents cannot read a hidden note's content or list a hidden folder, and cannot change, " +
+    "move, rename, delete, restore, lock or create inside it. Only a person can unhide it; " +
+    "ask one. locked (writes only): the lock that would refuse it as well, or null.",
   payload_too_large: "The request is too large.",
   database_unavailable: "The database is not available; try again later.",
   server_not_configured: "The server is not fully configured.",

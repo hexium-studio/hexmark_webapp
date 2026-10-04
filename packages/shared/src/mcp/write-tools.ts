@@ -2,7 +2,13 @@ import type { McpToolDefinition, McpToolError } from "./definition.ts";
 import { WRITE_EXAMPLES } from "./examples-write.ts";
 import { WRITE_RESULT_FIELDS } from "./fields.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { FOLDER_IN_TRASH, NOTE_ADDRESS_ERRORS, SECTION_ERRORS } from "./note-tools.ts";
+import {
+  FOLDER_IN_TRASH,
+  HIDDEN,
+  LOCKED,
+  NOTE_ADDRESS_ERRORS,
+  SECTION_ERRORS,
+} from "./note-tools.ts";
 
 // Tools that change notes. Every change of an existing note states the
 // version it is based on; a newer version is a version_conflict. Folders:
@@ -42,7 +48,7 @@ export const createNote = {
   input: input.create_note,
   defaults: {},
   result: WRITE_RESULT_FIELDS,
-  errors: [...TARGET_FOLDER, TITLE_TAKEN],
+  errors: [HIDDEN, LOCKED, ...TARGET_FOLDER, TITLE_TAKEN],
   example: WRITE_EXAMPLES.create_note,
 } satisfies McpToolDefinition<typeof input.create_note>;
 
@@ -60,7 +66,7 @@ export const updateNote = {
   input: input.update_note,
   defaults: {},
   result: WRITE_RESULT_FIELDS,
-  errors: [...NOTE_ADDRESS_ERRORS, CONFLICT, TITLE_TAKEN],
+  errors: [HIDDEN, LOCKED, ...NOTE_ADDRESS_ERRORS, CONFLICT, TITLE_TAKEN],
   example: WRITE_EXAMPLES.update_note,
 } satisfies McpToolDefinition<typeof input.update_note>;
 
@@ -79,6 +85,8 @@ export const replaceSection = {
   defaults: { include_subsections: true },
   result: WRITE_RESULT_FIELDS,
   errors: [
+    HIDDEN,
+    LOCKED,
     ...NOTE_ADDRESS_ERRORS,
     ...SECTION_ERRORS,
     [
@@ -107,6 +115,6 @@ export const moveNote = {
   input: input.move_note,
   defaults: {},
   result: WRITE_RESULT_FIELDS,
-  errors: [...NOTE_ADDRESS_ERRORS, CONFLICT, ...TARGET_FOLDER, TITLE_TAKEN],
+  errors: [HIDDEN, LOCKED, ...NOTE_ADDRESS_ERRORS, CONFLICT, ...TARGET_FOLDER, TITLE_TAKEN],
   example: WRITE_EXAMPLES.move_note,
 } satisfies McpToolDefinition<typeof input.move_note>;

@@ -1,9 +1,9 @@
 import { CHANGES_LIMITS, SEARCH_LIMITS, TREE_DEPTH_LIMITS } from "../notes.ts";
 import type { McpToolDefinition } from "./definition.ts";
 import { READ_EXAMPLES } from "./examples-read.ts";
-import { treeFields } from "./fields.ts";
+import { hiddenFields, lockFields, treeFields } from "./fields.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { FOLDER_IN_TRASH } from "./note-tools.ts";
+import { FOLDER_IN_TRASH, HIDDEN_FOLDER } from "./note-tools.ts";
 
 // Tools for finding one's way: overview, folder listing, search, changes.
 
@@ -14,20 +14,35 @@ export const getOverview = {
   readOnly: true,
   description:
     "Start here. Returns who this token acts as (the name shown in the history), its " +
-    "permissions and the folders it is limited to, the top two levels of the folder tree " +
-    "with note ids, titles and versions, and how many notes and folders it can see. Go " +
-    "deeper with list_folder. Requires the read permission.",
+    "access mode and permissions (for an allow list: the folders and notes it may reach), " +
+    "the top two levels of the folder tree with note ids, titles, versions, locks and " +
+    "hidden marks, and " +
+    "how many notes and folders it can see. Go deeper with list_folder. Requires the read " +
+    "permission.",
   input: input.get_overview,
   defaults: {},
   result: [
     ["instance.name", "string", "Name of the wiki software."],
     ["access.kind", '"token"', "Always token over MCP."],
     ["access.actorName", "string", "The token's name: shown in the history for its changes."],
-    ["access.permissions", "string[]", "What this token may do (see Permissions)."],
     [
-      "access.folderScope",
+      "access.mode",
+      "string",
+      "allow_list: only the listed folders (with everything below) and notes; nothing can be " +
+        "created at the root level. deny_list: the whole wiki this token can see (new " +
+        "content included), with one set of permissions.",
+    ],
+    [
+      "access.permissions",
+      "string[]",
+      "Every permission this token holds somewhere (see Permissions); on an allow list each " +
+        "entry has its own.",
+    ],
+    [
+      "access.entries",
       "array | null",
-      "Folders (id, path) the token is limited to, with their subfolders; null: whole wiki.",
+      "allow_list: the listed targets (kind, id, path, permissions, inTrash), without those " +
+        "below a hidden folder; null otherwise.",
     ],
     ...treeFields("tree"),
     ["treeDepth", "integer", "Folder levels the tree shows (2)."],
@@ -53,8 +68,12 @@ export const listFolder = {
   defaults: { depth: TREE_DEPTH_LIMITS.default },
   result: treeFields(""),
   errors: [
-    ["folder_not_found", "No such folder, or it lies outside this token's folders."],
+    [
+      "folder_not_found",
+      "No such folder, or it lies outside this token's folders (or below a hidden folder).",
+    ],
     FOLDER_IN_TRASH,
+    HIDDEN_FOLDER,
   ],
   example: READ_EXAMPLES.list_folder,
 } satisfies McpToolDefinition<typeof input.list_folder>;
@@ -68,28 +87,41 @@ export const searchNotes = {
     "Full-text search over all notes this token can see, ranked per section. Each hit " +
     "names the note (noteId, title, folder path), the sectionPath to pass to read_section, " +
     "its heading as written, a snippet of its text with matches marked «like this» (… where " +
-    "it is cut off), the note's current version and a relative rank. Search first, then " +
-    "read only the sections you need. Requires the search permission.",
+    "it is cut off), the note's current version and a relative rank. A hidden note is found " +
+    "by its title only (no section, heading or snippet); nothing below a hidden folder is " +
+    "searched. Search first, then read only the sections you need. Requires the search " +
+    "permission.",
   input: input.search_notes,
   defaults: { limit: SEARCH_LIMITS.default },
   result: [
     ["hits[]", "array", "Best matches first; one hit per matching section."],
     ["hits[].noteId", "string (uuid)", "The note's id."],
     ["hits[].title", "string", "The note's title."],
-    ["hits[].folderId", "string | null", "The note's folder; null for the root level."],
+    [
+      "hits[].folderId",
+      "string | null",
+      "The note's folder; null for the root level and for a folder this token cannot reach.",
+    ],
     ["hits[].folderPath", "string", "Folder names from the root joined by '/'."],
-    ["hits[].sectionPath", "string", "The matching section: pass it to read_section."],
+    [
+      "hits[].sectionPath",
+      "string | null",
+      "The matching section: pass it to read_section. null for a hidden note's title.",
+    ],
     [
       "hits[].heading",
-      "string",
-      "The section's heading as written, without marks; '' for the introduction.",
+      "string | null",
+      "The section's heading as written, without marks; '' for the introduction; null for a " +
+        "hidden note's title.",
     ],
     [
       "hits[].snippet",
       "string",
       "The section's text around the matches, without its heading line; matches marked " +
-        "«like this» (a phrase as one mark), '…' where text is left out.",
+        "«like this» (a phrase as one mark), '…' where text is left out. '' for a hidden " +
+        "note's title.",
     ],
+    ...hiddenFields("hits[].hidden"),
     ["hits[].version", "integer", "The note's current version."],
     [
       "hits[].rank",
@@ -98,7 +130,11 @@ export const searchNotes = {
         "others (three decimals).",
     ],
   ],
-  errors: [["folder_not_found", "folder_id names no folder this token can see."], FOLDER_IN_TRASH],
+  errors: [
+    ["folder_not_found", "folder_id names no folder this token can see."],
+    FOLDER_IN_TRASH,
+    HIDDEN_FOLDER,
+  ],
   example: READ_EXAMPLES.search_notes,
 } satisfies McpToolDefinition<typeof input.search_notes>;
 
@@ -132,10 +168,13 @@ export const listChanges = {
     [
       "changes[].sectionPath",
       "string | null",
-      "The section the latest change edited (replace_section); null for whole-note changes.",
+      "The section the latest change edited (replace_section); null for whole-note changes " +
+        "and for a hidden note.",
     ],
     ["changes[].changedAt", "string (ISO 8601)", "When the latest change was made."],
     ["changes[].deleted", "boolean", "true when the note is in the trash now."],
+    ...lockFields("changes[].locked"),
+    ...hiddenFields("changes[].hidden"),
   ],
   errors: [],
   example: READ_EXAMPLES.list_changes,

@@ -23,6 +23,8 @@ const header: NoteHeader = {
   createdBy: "alex",
   updatedAt: "2026-10-01T09:30:00.000Z",
   updatedBy: "docs-agent",
+  locked: null,
+  hidden: null,
 };
 
 function outlineEntry(

@@ -2,7 +2,7 @@ import { TRASH_LIST_LIMITS, TRASH_RETENTION_DAYS } from "../notes.ts";
 import type { McpToolDefinition, McpToolError } from "./definition.ts";
 import { TRASH_EXAMPLES } from "./examples-trash.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { FOLDER_IN_TRASH, NOTE_ADDRESS_ERRORS } from "./note-tools.ts";
+import { FOLDER_IN_TRASH, HIDDEN, LOCKED, NOTE_ADDRESS_ERRORS } from "./note-tools.ts";
 
 // The trash. Deleting moves a note, or a folder with everything in it, to
 // the trash; it can be restored until the server purges it after the
@@ -13,6 +13,25 @@ const KEPT =
   "Restorable with restore_note / restore_folder until the server purges it after the " +
   `retention period (the server instructions name its days; default ${TRASH_RETENTION_DAYS.default}). ` +
   "Agents cannot delete anything for good.";
+
+// A folder goes to the trash and comes back only as a whole batch, so an
+// agent must be allowed to take along everything in it. One rule for both
+// tools: a hidden item it can see is named (hidden); items out of its reach
+// are not (forbidden, hidden_content); hidden comes first.
+export const BATCH_HIDDEN: McpToolError = [
+  "hidden",
+  "The folder itself, or a note or folder inside it that would go along, is hidden from " +
+    "agents (details: hiddenItem { kind, id, path } names it, hiddenAt, hiddenBy, reason; " +
+    "locked: a lock refusing it as well, or null). This answer comes first, also when items " +
+    "out of reach lie inside too. Nothing was changed; only a person can unhide it.",
+];
+
+export const HIDDEN_CONTENT: McpToolError = [
+  "forbidden",
+  "reason hidden_content: the folder holds notes or folders outside this token's reach " +
+    "(not listed on an allow list, excluded on a deny list; they are not named), which " +
+    "would go along. Nothing was changed. Ask a person.",
+];
 
 export const PARENT_IN_TRASH: McpToolError = [
   "parent_in_trash",
@@ -46,6 +65,8 @@ export const deleteNote = {
     ...TRASHED_FIELDS,
   ],
   errors: [
+    HIDDEN,
+    LOCKED,
     ...NOTE_ADDRESS_ERRORS,
     [
       "version_conflict",
@@ -75,6 +96,9 @@ export const deleteFolder = {
     ["noteCount", "integer", "Notes moved along with it."],
   ],
   errors: [
+    BATCH_HIDDEN,
+    HIDDEN_CONTENT,
+    LOCKED,
     ["folder_not_found", "No folder in use that this token can see has that id."],
     [
       FOLDER_IN_TRASH[0],

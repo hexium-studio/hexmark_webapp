@@ -3,7 +3,8 @@ import { sql } from "drizzle-orm";
 import { SNIPPET_FRAGMENT_DELIMITER, SNIPPET_OPTIONS } from "../../config/notes";
 import type { Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { canSeeFolder, visibleFolderSql } from "../access/authorize";
+import { hiddenRefusal, noteHiddenState } from "../hidden/hidden-state";
+import { isAgent } from "../locks/lock-guard";
 import { missingFolder } from "../trash/in-trash";
 import { unmarkCompoundParts } from "./compound-marks";
 import { folderSubtreeIds } from "./folder-index";
@@ -17,18 +18,27 @@ import { finishSnippet, relativeRanks } from "./snippets";
 // from the section's own text without its heading line (snippets.ts
 // finishes it, after compound-marks.ts took off the marks of a hyphenated
 // word's parts), which comes as a field of its own, as written: no marks, so
-// it can be compared with the outline's headings.
+// it can be compared with the outline's headings. Only notes the caller holds
+// search on are searched (a note listed on its own with read counts,
+// services/access/policy.ts). For an agent, nothing below a hidden folder is
+// searched (it does not exist for it) and a hidden note is found by its
+// title alone: one hit without section, heading or snippet, never by its
+// headings or text. Searching inside a hidden folder is refused with hidden.
 
 interface HitRow extends Record<string, unknown> {
   note_id: string;
   title: string;
   folder_id: string | null;
-  path: string;
-  heading: string;
+  // Null for a hit on a hidden note's title (agents).
+  path: string | null;
+  heading: string | null;
   version: number;
   rank: number;
   snippet: string;
   text: string;
+  hidden_at: Date | string | null;
+  hidden_by_name: string | null;
+  hide_reason: string | null;
 }
 
 // The heading line of a section's own text: one line for "# Heading", two
@@ -47,27 +57,48 @@ export function searchNotes(
     async ({ tx, grant, index }) => {
       let within = sql`true`;
       if (input.folderId !== null) {
-        if (!index.get(input.folderId)) return missingFolder(tx, grant, input.folderId);
-        if (!canSeeFolder(grant, input.folderId)) return refuse("folder_not_found");
+        const folder = index.get(input.folderId);
+        if (!folder) return missingFolder(tx, grant, input.folderId);
+        if (!grant.view.seesFolder(input.folderId)) return refuse("folder_not_found");
+        if (folder.hidden && isAgent(grant)) {
+          const item = { kind: "folder" as const, id: folder.id, path: index.pathOf(folder.id) };
+          return hiddenRefusal(item, folder.hidden);
+        }
         const ids = await folderSubtreeIds(tx, [input.folderId]);
         within = sql`n.folder_id = any(${sql.param(ids)}::uuid[])`;
       }
+      const visible = grant.view.noteSql("search", sql`n.id`, sql`n.folder_id`);
+      // Agents: sections of notes that are not hidden; titles of those that are.
+      const agent = isAgent(grant);
+      const open = agent ? sql`n.hidden_at is null` : sql`true`;
+      const titleOnly = agent ? sql`n.hidden_at is not null` : sql`false`;
+      const query = sql`websearch_to_tsquery('simple', ${input.query}) as q(query)`;
       // Hits first, snippets only for the ones returned.
       const rows = await tx.execute<HitRow>(sql`
       select hit.note_id, hit.title, hit.folder_id, hit.path, hit.version, hit.rank, hit.text,
-        hit.heading,
-        ts_headline('simple', hit.text, hit.query, ${SNIPPET_OPTIONS}) as snippet
+        hit.heading, hit.hidden_at, hit.hidden_by_name, hit.hide_reason,
+        case when hit.path is null then ''
+          else ts_headline('simple', hit.text, hit.query, ${SNIPPET_OPTIONS}) end as snippet
       from (
-        select s.note_id, n.title, n.folder_id, s.path, s.heading, n.version, q.query,
+        (select s.note_id, n.title, n.folder_id, s.path, s.heading, n.version, q.query,
           ts_rank(s.search, q.query)::float8 as rank,
           regexp_replace(substr(n.body, s.start_offset + 1, s.end_offset - s.start_offset),
-            '^([^\n]*(\n|$)){' || ${HEADING_LINES} || '}', '') as text
+            '^([^\n]*(\n|$)){' || ${HEADING_LINES} || '}', '') as text,
+          n.hidden_at, n.hidden_by_name, n.hide_reason, n.updated_at, s.position
         from note_sections s
         join notes n on n.id = s.note_id
-        cross join websearch_to_tsquery('simple', ${input.query}) as q(query)
-        where s.search @@ q.query and n.deleted_at is null
-          and ${visibleFolderSql(grant, sql`n.folder_id`)} and ${within}
-        order by rank desc, n.updated_at desc, s.position
+        cross join ${query}
+        where s.search @@ q.query and n.deleted_at is null and ${open}
+          and ${visible} and ${within})
+        union all
+        (select n.id, n.title, n.folder_id, null, null, n.version, q.query,
+          ts_rank(to_tsvector('simple', n.title), q.query)::float8, '',
+          n.hidden_at, n.hidden_by_name, n.hide_reason, n.updated_at, 0
+        from notes n
+        cross join ${query}
+        where ${titleOnly} and to_tsvector('simple', n.title) @@ q.query
+          and n.deleted_at is null and ${visible} and ${within})
+        order by rank desc, updated_at desc, position
         limit ${input.limit}
       ) hit
       order by hit.rank desc
@@ -76,15 +107,26 @@ export function searchNotes(
       return rows.map((row, position) => ({
         noteId: row.note_id,
         title: row.title,
-        folderId: row.folder_id,
+        folderId: grant.view.shownFolderId(row.folder_id),
         folderPath: index.pathOf(row.folder_id),
         sectionPath: row.path,
         heading: row.heading,
-        snippet: finishSnippet(
-          unmarkCompoundParts(row.snippet, input.query),
-          row.text,
-          SNIPPET_FRAGMENT_DELIMITER,
-        ),
+        snippet:
+          row.path === null
+            ? ""
+            : finishSnippet(
+                unmarkCompoundParts(row.snippet, input.query),
+                row.text,
+                SNIPPET_FRAGMENT_DELIMITER,
+              ),
+        hidden: noteHiddenState(grant.view, {
+          id: row.note_id,
+          title: row.title,
+          folderId: row.folder_id,
+          hiddenAt: row.hidden_at === null ? null : new Date(row.hidden_at),
+          hiddenByName: row.hidden_by_name,
+          hideReason: row.hide_reason,
+        }),
         version: row.version,
         rank: ranks[position] ?? 0,
       }));

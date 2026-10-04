@@ -2,7 +2,8 @@ import type { McpToolDefinition } from "./definition.ts";
 import { TRASH_EXAMPLES } from "./examples-trash.ts";
 import { WRITE_RESULT_FIELDS } from "./fields.ts";
 import { mcpToolInputs as input } from "./inputs.ts";
-import { PARENT_IN_TRASH } from "./trash-tools.ts";
+import { HIDDEN, LOCKED } from "./note-tools.ts";
+import { BATCH_HIDDEN, HIDDEN_CONTENT, PARENT_IN_TRASH } from "./trash-tools.ts";
 
 // Restoring from the trash (trash-tools.ts): by id, as items in the trash
 // have no address by title or path.
@@ -23,6 +24,8 @@ export const restoreNote = {
   defaults: {},
   result: WRITE_RESULT_FIELDS,
   errors: [
+    HIDDEN,
+    LOCKED,
     ["not_found", "No note this token can see has that id."],
     ["note_not_deleted", "The note is not in the trash."],
     PARENT_IN_TRASH,
@@ -72,6 +75,9 @@ export const restoreFolder = {
     ],
   ],
   errors: [
+    BATCH_HIDDEN,
+    HIDDEN_CONTENT,
+    LOCKED,
     ["folder_not_found", "No folder this token can see has that id."],
     ["folder_not_deleted", "The folder is not in the trash."],
     PARENT_IN_TRASH,

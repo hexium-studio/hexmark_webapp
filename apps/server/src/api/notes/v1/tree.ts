@@ -1,6 +1,6 @@
 import { treeQuerySchema } from "@hexmark/shared";
 import type { Context } from "hono";
-import { listTree } from "../../../services/notes/tree";
+import { listTree } from "../../../services/notes/tree-listing";
 import { handle } from "../_lib/request";
 
 // GET /api/notes/v1/tree – see index.ts for the contract.

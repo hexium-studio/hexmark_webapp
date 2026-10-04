@@ -117,7 +117,9 @@ const INPUT_FIELDS = new Set([
   "title",
   "name",
   "permissions",
-  "folderScope",
+  "mode",
+  "basePermissions",
+  "entries",
   "expiresAt",
   "requireTwoFactor",
   "timezone",
@@ -165,6 +167,14 @@ const REFUSAL_FIELDS = new Set([
   "parentPath",
   "section",
   "folderIds",
+  "noteIds",
+  "lockedItem",
+  "lockedAt",
+  "lockedBy",
+  "hiddenItem",
+  "hiddenAt",
+  "hiddenBy",
+  "locked",
 ]);
 
 export function summarizeRefusal(details: Record<string, unknown> | undefined) {

@@ -22,6 +22,7 @@ export const NOTE_PERMISSIONS = [
   "move",
   "delete",
   "lock",
+  "hide",
 ] as const;
 export type NotePermission = (typeof NOTE_PERMISSIONS)[number];
 

@@ -27,8 +27,47 @@ export const FOLDER_IN_TRASH: McpToolError = [
     "restore_folder takes); restore it with restore_folder first.",
 ];
 
+// A write an agent may not make because the item, or a folder above it, is
+// locked; people can still change it.
+export const LOCKED: McpToolError = [
+  "locked",
+  "The note or folder, or a folder above it (or the target folder), is locked: agents " +
+    "cannot change, move, rename, delete, restore or create inside it (details: lockedItem " +
+    "{ kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can " +
+    "unlock it; ask one, or leave it as it is.",
+];
+
+// A write an agent may not make because the item, a folder it would take
+// along, or the target folder is hidden; people can still change it.
+export const HIDDEN: McpToolError = [
+  "hidden",
+  "The note or folder (or the target folder, or something inside a folder that would go " +
+    "along) is hidden from agents: they cannot change, move, rename, delete, restore, lock " +
+    "or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, " +
+    "reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. " +
+    "Only a person can unhide it; ask one.",
+];
+
+// A note whose content an agent cannot read.
+export const HIDDEN_NOTE: McpToolError = [
+  "hidden",
+  "The note is hidden from agents: its content cannot be read (details: hiddenItem " +
+    "{ kind, id, path }, title, hiddenAt, hiddenBy, reason). Only a person can unhide it.",
+];
+
+// A folder an agent cannot look into.
+export const HIDDEN_FOLDER: McpToolError = [
+  "hidden",
+  "The folder is hidden from agents: nothing below it can be listed or searched (details: " +
+    "hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason).",
+];
+
 export const NOTE_ADDRESS_ERRORS: readonly McpToolError[] = [
-  ["not_found", "No note this token can see has that id, title or path."],
+  [
+    "not_found",
+    "No note this token can see has that id, title or path (also any note below a hidden " +
+      "folder).",
+  ],
   AMBIGUOUS_NOTE,
   IN_TRASH,
 ];
@@ -76,7 +115,7 @@ export const readOutline = {
       "approxTokens is above budget: read subsections, or in chunks (offset/limit).",
     ],
   ],
-  errors: NOTE_ADDRESS_ERRORS,
+  errors: [...NOTE_ADDRESS_ERRORS, HIDDEN_NOTE],
   example: NOTE_EXAMPLES.read_outline,
 } satisfies McpToolDefinition<typeof input.read_outline>;
 
@@ -118,7 +157,7 @@ export const readSection = {
       "Only when offset is past the end: the offset you asked for (offset is then total).",
     ],
   ],
-  errors: [...NOTE_ADDRESS_ERRORS, ...SECTION_ERRORS],
+  errors: [...NOTE_ADDRESS_ERRORS, HIDDEN_NOTE, ...SECTION_ERRORS],
   example: NOTE_EXAMPLES.read_section,
 } satisfies McpToolDefinition<typeof input.read_section>;
 
@@ -142,6 +181,6 @@ export const readNote = {
     ["note.approxTokens", "integer", "Estimated tokens of the body."],
     ["hint", "string (optional)", "Present when the note is above the reading budget."],
   ],
-  errors: NOTE_ADDRESS_ERRORS,
+  errors: [...NOTE_ADDRESS_ERRORS, HIDDEN_NOTE],
   example: NOTE_EXAMPLES.read_note,
 } satisfies McpToolDefinition<typeof input.read_note>;

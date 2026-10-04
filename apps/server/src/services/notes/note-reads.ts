@@ -5,23 +5,24 @@ import type { Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
 import type { NoteRef } from "./addressing";
 import { noteHeader, readSections } from "./note-store";
-import { findNote, noteTarget, withRead } from "./read-frame";
+import { findNoteContent, noteTarget, withRead } from "./read-frame";
 import { isFailure } from "./refusals";
 import { textChunk } from "./section-chunks";
 import { findSection, sectionMissRefusal, sectionText } from "./section-lookup";
 import { approxTokens } from "./sections";
 
-// Reading notes: whole, as an outline, or one section.
+// Reading notes: whole, as an outline, or one section. An agent cannot read
+// a hidden note's content in any of these ways (read-frame.ts).
 
 export function readFullNote(ref: AccessRef, now: Date, note: NoteRef): Promise<Outcome<FullNote>> {
   const request = { ref, now, permission: "read", action: "read.note", input: { note } } as const;
   return withRead(
     request,
     async (context) => {
-      const row = await findNote(context, note);
+      const row = await findNoteContent(context, note);
       if (isFailure(row)) return row;
       return {
-        ...noteHeader(row, context.index),
+        ...noteHeader(row, context.grant.view),
         body: row.body,
         metadata: row.metadata,
         characters: countCodePoints(row.body),
@@ -52,7 +53,7 @@ export function readOutline(ref: AccessRef, now: Date, note: NoteRef): Promise<O
   return withRead(
     request,
     async (context) => {
-      const row = await findNote(context, note);
+      const row = await findNoteContent(context, note);
       if (isFailure(row)) return row;
       const sections = (await readSections(context.tx, row.id)).map((section) => ({
         position: section.position,
@@ -64,7 +65,7 @@ export function readOutline(ref: AccessRef, now: Date, note: NoteRef): Promise<O
         approxTokens: section.approxTokens,
         overBudget: section.approxTokens > sectionTokenBudget,
       }));
-      return { note: noteHeader(row, context.index), budget: sectionTokenBudget, sections };
+      return { note: noteHeader(row, context.grant.view), budget: sectionTokenBudget, sections };
     },
     (read, { index }) => ({
       target: noteTarget(read.note, index),
@@ -104,14 +105,14 @@ export function readSection(
   return withRead(
     read,
     async (context) => {
-      const row = await findNote(context, note);
+      const row = await findNoteContent(context, note);
       if (isFailure(row)) return row;
       const match = findSection(await readSections(context.tx, row.id), path);
       if ("error" in match) return sectionMissRefusal(match, path);
       const whole = sectionText(row.body, match.found, includeSubsections);
       const { text, ...piece } = textChunk(whole, request.offset, request.limit);
       return {
-        note: noteHeader(row, context.index),
+        note: noteHeader(row, context.grant.view),
         section: {
           path: match.found.path,
           level: match.found.level,

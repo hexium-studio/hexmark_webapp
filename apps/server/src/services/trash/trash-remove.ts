@@ -8,7 +8,19 @@ import type { Transaction } from "../../db/client";
 // (cascade). Folders go children first (parent_id refuses to lose a parent
 // that still has children), so a folder whose subtree still holds something
 // - an item deleted later and not due yet, in the purge - stays until that
-// is gone too.
+// is gone too. API token entries pointing at a removed item go with it
+// (cascade); each is reported with the item.
+
+// An API token's entry that pointed at a removed item: the database removes
+// it with the item (cascade), so it is read in the same statement, for the
+// audit log (entry-removal-events.ts).
+export interface RemovedEntry {
+  id: string;
+  tokenId: string;
+  tokenName: string;
+  mode: "allow_list" | "deny_list";
+  permissions: string[] | null;
+}
 
 // One note or folder deleted for good, as it was: for the audit log.
 export interface RemovedItem extends Record<string, unknown> {
@@ -18,6 +30,17 @@ export interface RemovedItem extends Record<string, unknown> {
   // The note's folder or the folder's parent.
   parent_id: string | null;
   trash_batch_id: string | null;
+  entries: RemovedEntry[];
+}
+
+// The entries of the removed rows, seen with the statement's snapshot,
+// before the cascade removes them.
+function withEntries(column: "note_id" | "folder_id") {
+  return sql`coalesce((
+    select json_agg(json_build_object('id', e.id, 'tokenId', e.token_id, 'tokenName', t.name,
+      'mode', e.token_access_mode, 'permissions', e.permissions) order by e.id)
+    from api_token_entries e join api_tokens t on t.id = e.token_id
+    where e.${sql.raw(column)} = r.id), '[]'::json) as entries`;
 }
 
 export interface Removed {
@@ -60,8 +83,11 @@ export async function removeFromTrash(tx: Transaction, filter: RemovalFilter): P
     noteParts.push(sql`(${sql.join(targets, sql` or `)})`);
   }
   const removedNotes = await tx.execute<RemovedItem>(sql`
-    delete from notes n where ${sql.join(noteParts, sql` and `)}
-    returning n.id, n.title as name, n.folder_id as parent_id, n.trash_batch_id
+    with r as (
+      delete from notes n where ${sql.join(noteParts, sql` and `)}
+      returning n.id, n.title as name, n.folder_id as parent_id, n.trash_batch_id
+    )
+    select r.*, ${withEntries("note_id")} from r
   `);
   const removedFolders: RemovedItem[] = [];
   if (noteIds && !folderIds) return { notes: [...removedNotes], folders: [] };
@@ -72,8 +98,11 @@ export async function removeFromTrash(tx: Transaction, filter: RemovalFilter): P
   // One level of leaves per round, until no folder is left that may go.
   for (;;) {
     const round = await tx.execute<RemovedItem>(sql`
-      delete from folders f where ${sql.join(folderParts, sql` and `)}
-      returning f.id, f.name, f.parent_id, f.trash_batch_id
+      with r as (
+        delete from folders f where ${sql.join(folderParts, sql` and `)}
+        returning f.id, f.name, f.parent_id, f.trash_batch_id
+      )
+      select r.*, ${withEntries("folder_id")} from r
     `);
     if (round.length === 0) break;
     removedFolders.push(...round);

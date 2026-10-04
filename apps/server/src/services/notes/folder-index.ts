@@ -8,20 +8,35 @@ import { folders } from "../../db/schema";
 // folders are few compared with its notes, so one query is cheaper than
 // walking the tree row by row.
 
+// A folder's own lock (lock-columns.ts) or hidden mark (hidden-columns.ts):
+// when, by whom, why. What it inherits is derived.
+export interface FolderLock {
+  at: Date;
+  byName: string;
+  reason: string | null;
+}
+
+export type FolderHidden = FolderLock;
+
 export interface FolderEntry {
   id: string;
   parentId: string | null;
   name: string;
+  lock: FolderLock | null;
+  hidden: FolderHidden | null;
 }
 
 export class FolderIndex {
   private readonly byId = new Map<string, FolderEntry>();
   private readonly paths = new Map<string, string>();
   private readonly childLists = new Map<string | null, FolderEntry[]>();
+  // The folders hidden themselves (services/access/policy.ts).
+  readonly hidden = new Set<string>();
 
   constructor(entries: readonly FolderEntry[]) {
     for (const entry of entries) {
       this.byId.set(entry.id, entry);
+      if (entry.hidden) this.hidden.add(entry.id);
       const siblings = this.childLists.get(entry.parentId) ?? [];
       siblings.push(entry);
       this.childLists.set(entry.parentId, siblings);
@@ -31,6 +46,10 @@ export class FolderIndex {
 
   get size(): number {
     return this.byId.size;
+  }
+
+  ids(): string[] {
+    return [...this.byId.keys()];
   }
 
   get(id: string): FolderEntry | undefined {
@@ -59,6 +78,17 @@ export class FolderIndex {
     return path;
   }
 
+  // The folder and the folders above it, nearest first; [] for the root
+  // level. An unknown folder is its own chain.
+  chain(id: string | null): string[] {
+    const ids: string[] = [];
+    for (let current = id; current !== null && !ids.includes(current); ) {
+      ids.push(current);
+      current = this.byId.get(current)?.parentId ?? null;
+    }
+    return ids;
+  }
+
   // The folder at these names from the root (ignoring case); undefined when
   // there is none. An empty list is the root level (null).
   findByNames(names: readonly string[]): string | null | undefined {
@@ -83,10 +113,28 @@ export class FolderIndex {
 // in the trash (their original paths).
 export async function loadFolderIndex(tx: Transaction, withTrash = false): Promise<FolderIndex> {
   const rows = await tx
-    .select({ id: folders.id, parentId: folders.parentId, name: folders.name })
+    .select({
+      id: folders.id,
+      parentId: folders.parentId,
+      name: folders.name,
+      lockedAt: folders.lockedAt,
+      lockedByName: folders.lockedByName,
+      lockReason: folders.lockReason,
+      hiddenAt: folders.hiddenAt,
+      hiddenByName: folders.hiddenByName,
+      hideReason: folders.hideReason,
+    })
     .from(folders)
     .where(withTrash ? undefined : isNull(folders.deletedAt));
-  return new FolderIndex(rows);
+  return new FolderIndex(
+    rows.map(
+      ({ lockedAt, lockedByName, lockReason, hiddenAt, hiddenByName, hideReason, ...entry }) => ({
+        ...entry,
+        lock: lockedAt ? { at: lockedAt, byName: lockedByName ?? "", reason: lockReason } : null,
+        hidden: hiddenAt ? { at: hiddenAt, byName: hiddenByName ?? "", reason: hideReason } : null,
+      }),
+    ),
+  );
 }
 
 // The given folders and all folders below them (recursive CTE), without

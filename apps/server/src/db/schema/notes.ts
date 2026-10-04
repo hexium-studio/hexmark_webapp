@@ -12,9 +12,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { actorChecks, actorColumns, optionalActorPairing } from "./actor-columns";
+import { actorChecks, actorColumns } from "./actor-columns";
 import { folders } from "./folders";
+import { hiddenChecks, hiddenColumns, hiddenIndexes } from "./hidden-columns";
 import { idColumn } from "./id-column";
+import { lockChecks, lockColumns } from "./lock-columns";
 import { trashChecks, trashColumns, trashIndexes } from "./trash-columns";
 import { tsvector } from "./tsvector";
 
@@ -24,8 +26,9 @@ export { NOTE_BODY_MAX_BYTES, NOTE_TITLE_MAX_LENGTH };
 
 const createdBy = actorColumns("created_by");
 const updatedBy = actorColumns("updated_by");
-const lockedBy = actorColumns("locked_by");
+const lock = lockColumns();
 const trash = trashColumns();
+const hide = hiddenColumns();
 
 // Shared by notes and note_revisions (a revision is a full snapshot).
 export const noteTitleMaxSql = sql.raw(String(NOTE_TITLE_MAX_LENGTH));
@@ -69,13 +72,24 @@ export const notes = pgTable(
     deletedByTokenId: trash.deletedByTokenId,
     deletedByName: trash.deletedByName,
     trashBatchId: trash.trashBatchId,
-    // Locked (agents may not change the note) and hidden (agents cannot read
-    // it): columns only, the rules follow in a later milestone.
-    lockedAt: timestamp("locked_at", { withTimezone: true }),
-    lockedByUserId: lockedBy.userId,
-    lockedByTokenId: lockedBy.tokenId,
-    lockedByName: lockedBy.name,
-    hidden: boolean("hidden").notNull().default(false),
+    // Locked (agents may not change the note; lock-columns.ts); null while
+    // the note is not locked.
+    lockedAt: lock.lockedAt,
+    lockedByUserId: lock.lockedByUserId,
+    lockedByTokenId: lock.lockedByTokenId,
+    lockedByName: lock.lockedByName,
+    lockReason: lock.lockReason,
+    // Hidden (agents cannot read its content; hidden-columns.ts); null while
+    // the note is not hidden.
+    hiddenAt: hide.hiddenAt,
+    hiddenByUserId: hide.hiddenByUserId,
+    hiddenByTokenId: hide.hiddenByTokenId,
+    hiddenByName: hide.hiddenByName,
+    hideReason: hide.hideReason,
+    // Derived from hidden_at by PostgreSQL (migration 0011 replaced the
+    // plain flag), so a server of the previous version, which selects it,
+    // keeps working. Nothing new should read it; hidden_at is the source.
+    hidden: boolean("hidden").notNull().generatedAlwaysAs(sql`"hidden_at" is not null`),
   },
   (table) => [
     // Titles are unique within a folder regardless of case, ignoring notes in
@@ -106,16 +120,9 @@ export const notes = pgTable(
       tokenId: table.updatedByTokenId,
       name: table.updatedByName,
     }),
-    ...actorChecks("notes", "locked_by", {
-      userId: table.lockedByUserId,
-      tokenId: table.lockedByTokenId,
-      name: table.lockedByName,
-    }),
-    optionalActorPairing("notes", "locked_by", table.lockedAt, {
-      userId: table.lockedByUserId,
-      tokenId: table.lockedByTokenId,
-      name: table.lockedByName,
-    }),
+    ...lockChecks("notes", table),
+    ...hiddenChecks("notes", table),
+    ...hiddenIndexes("notes", table),
     ...trashChecks("notes", table),
     ...trashIndexes("notes", table),
   ],

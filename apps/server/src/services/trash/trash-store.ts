@@ -3,14 +3,13 @@ import { type SQL, sql } from "drizzle-orm";
 import { trashRetentionDays } from "../../config/trash";
 import type { Transaction } from "../../db/client";
 import type { Actor } from "../access/access";
-import type { Grant } from "../access/authorize";
-import { folderSubtreeIds } from "../notes/folder-index";
 import { purgeAt } from "./retention";
 
 // The trash columns of notes and folders (deleted_at, deleted_by_*,
 // trash_batch_id; db/schema/trash-columns.ts) and what every trash
-// operation shares: who may see what is in the trash, and the revisions
-// written when notes go there or come back.
+// operation shares: the revisions written when notes go there or come
+// back. Who may see what is in the trash: the access view over all folders
+// (Grant.trashView, services/access).
 
 export interface TrashMark {
   deletedAt: Date | null;
@@ -45,22 +44,6 @@ export function inTrashDetails(deletedAt: Date): InTrashDetails {
     deletedAt: deletedAt.toISOString(),
     purgeAt: purgeAt(deletedAt, trashRetentionDays).toISOString(),
   };
-}
-
-// Folders whose items in the trash the caller may see: its folders and all
-// below them, including folders in the trash (whose contents went there with
-// them). Null: every folder and the root level.
-export async function trashScope(
-  tx: Transaction,
-  grant: Grant,
-): Promise<ReadonlySet<string> | null> {
-  const roots = grant.access.folderScope;
-  return roots === null ? null : new Set(await folderSubtreeIds(tx, roots, true));
-}
-
-// For a note: the folder it was in; for a folder: the folder itself.
-export function inTrashScope(scope: ReadonlySet<string> | null, folderId: string | null): boolean {
-  return scope === null || (folderId !== null && scope.has(folderId));
 }
 
 // A note markNotes changed: its new version, title and folder.

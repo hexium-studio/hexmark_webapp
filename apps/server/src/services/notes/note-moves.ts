@@ -25,7 +25,7 @@ export function moveNote(
     reason: input.reason,
     async plan(row, { tx, grant }) {
       if (row.folderId === input.folderId) return null;
-      const refused = await lockTargetFolder(tx, grant, input.folderId);
+      const refused = await lockTargetFolder(tx, grant, input.folderId, "move");
       if (refused) return refused;
       return { change: "moved", folderId: input.folderId };
     },

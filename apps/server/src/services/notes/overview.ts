@@ -4,7 +4,8 @@ import { OVERVIEW_DEPTH } from "../../config/notes";
 import { notes } from "../../db/schema";
 import type { Outcome } from "../../lib/outcome";
 import type { AccessRef } from "../access/access";
-import { visibleFolderSql } from "../access/authorize";
+import { type ListedTarget, listedTargets } from "../access/describe";
+import type { AccessPolicy } from "../access/policy";
 import { withRead } from "./read-frame";
 import { buildTree } from "./tree";
 
@@ -16,9 +17,13 @@ export interface Overview {
   access: {
     kind: "session" | "token";
     actorName: string;
-    permissions: NotePermission[];
-    // Null: the whole wiki.
-    folderScope: { id: string; path: string }[] | null;
+    // "all" for a person's session.
+    mode: AccessPolicy["mode"];
+    // What it holds anywhere.
+    permissions: readonly NotePermission[];
+    // allow_list: the listed folders and notes with their permissions; null
+    // otherwise.
+    entries: ListedTarget[] | null;
   };
   tree: TreeResponse;
   treeDepth: number;
@@ -37,16 +42,17 @@ export function readOverview(ref: AccessRef, now: Date): Promise<Outcome<Overvie
       const [noteCount] = await tx
         .select({ value: count() })
         .from(notes)
-        .where(and(isNull(notes.deletedAt), visibleFolderSql(grant, notes.folderId)));
-      const folderCount = grant.scope === null ? index.size : grant.scope.size;
+        .where(and(isNull(notes.deletedAt), grant.view.noteSql(null, notes.id, notes.folderId)));
+      const folderCount = grant.view.folderIds()?.length ?? index.size;
       const { access } = grant;
       return {
         instance: { name: INSTANCE_NAME },
         access: {
           kind: access.ref.kind,
           actorName: access.actor.name,
+          mode: access.policy.mode,
           permissions: access.permissions,
-          folderScope: access.folderScope?.map((id) => ({ id, path: index.pathOf(id) })) ?? null,
+          entries: await listedTargets(tx, access.policy),
         },
         tree: await buildTree(context, null, OVERVIEW_DEPTH),
         treeDepth: OVERVIEW_DEPTH,

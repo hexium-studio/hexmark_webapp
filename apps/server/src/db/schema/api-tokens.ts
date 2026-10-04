@@ -1,6 +1,12 @@
-import { API_TOKEN_NAME_MAX_LENGTH, NOTE_PERMISSIONS, type NotePermission } from "@hexmark/shared";
+import {
+  API_TOKEN_ACCESS_MODES,
+  API_TOKEN_NAME_MAX_LENGTH,
+  type ApiTokenAccessMode,
+  NOTE_PERMISSIONS,
+  type NotePermission,
+} from "@hexmark/shared";
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { idColumn } from "./id-column";
 import { users } from "./users";
 
@@ -9,11 +15,22 @@ import { users } from "./users";
 export const API_TOKEN_PERMISSIONS = NOTE_PERMISSIONS;
 export type ApiTokenPermission = NotePermission;
 
-export { API_TOKEN_NAME_MAX_LENGTH };
+export { API_TOKEN_ACCESS_MODES, API_TOKEN_NAME_MAX_LENGTH, type ApiTokenAccessMode };
 
-const permissionList = sql.raw(
-  `ARRAY[${API_TOKEN_PERMISSIONS.map((permission) => `'${permission}'`).join(", ")}]::text[]`,
-);
+// How a token's access is described (api-token-entries.ts):
+// - allow_list: only the listed folders (with everything below them) and
+//   notes, each entry with its own permissions;
+// - deny_list: the whole wiki except the listed targets, with one set of
+//   permissions (base_permissions) for everything it can reach.
+// Chosen when the token is created; there is no default. The list is
+// shared with the input schemas (@hexmark/shared, api-token-access.ts).
+
+// A text[] literal of the given values, for checks.
+export function textArraySql(values: readonly string[]) {
+  return sql.raw(`ARRAY[${values.map((value) => `'${value}'`).join(", ")}]::text[]`);
+}
+
+const permissionList = textArraySql(API_TOKEN_PERMISSIONS);
 
 // API tokens for agents ("hmk_" + 32 random bytes as base64url). The token is
 // shown once; the database keeps its SHA-256 digest as lower-case hex (the
@@ -32,8 +49,18 @@ export const apiTokens = pgTable(
     name: text("name").notNull(),
     tokenHash: text("token_hash").notNull().unique("api_tokens_token_hash_unique"),
     tokenPrefix: text("token_prefix").notNull(),
-    permissions: text("permissions").array().$type<ApiTokenPermission[]>().notNull(),
-    // Null: the whole wiki. Otherwise these folders and their subfolders.
+    accessMode: text("access_mode").$type<ApiTokenAccessMode>().notNull(),
+    // deny_list: the permissions for everything not excluded. allow_list:
+    // null (each entry carries its own).
+    basePermissions: text("base_permissions").array().$type<ApiTokenPermission[]>(),
+    // Legacy, replaced by access_mode, base_permissions and the entries
+    // (migration 0010 converted every token). Kept for one release so a
+    // server of the previous version keeps working on a migrated database
+    // (it can use existing tokens, but not create new ones, as it sets no
+    // access_mode); nothing new should read or write them. A later migration drops both.
+    // Old meaning: the permissions, and null for the whole wiki or else
+    // these folders and their subfolders.
+    permissions: text("permissions").array().$type<ApiTokenPermission[]>(),
     folderScope: uuid("folder_scope").array(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
@@ -44,6 +71,9 @@ export const apiTokens = pgTable(
     // Unique per user regardless of case, also among revoked tokens: the name
     // identifies the agent in the history. Also serves lookups by user_id.
     uniqueIndex("api_tokens_user_id_name_unique").on(table.userId, sql`lower(${table.name})`),
+    // Target of the entries' (token_id, token_access_mode) foreign key, so
+    // the database knows each entry's mode (api-token-entries.ts).
+    unique("api_tokens_id_access_mode_unique").on(table.id, table.accessMode),
     check(
       "api_tokens_name_length_check",
       sql`char_length(${table.name}) between 1 and ${sql.raw(String(API_TOKEN_NAME_MAX_LENGTH))}`,
@@ -58,6 +88,19 @@ export const apiTokens = pgTable(
     check(
       "api_tokens_permissions_check",
       sql`cardinality(${table.permissions}) > 0 and array_ndims(${table.permissions}) = 1 and ${table.permissions} <@ ${permissionList}`,
+    ),
+    check(
+      "api_tokens_access_mode_check",
+      sql`${table.accessMode} in (${sql.raw(API_TOKEN_ACCESS_MODES.map((mode) => `'${mode}'`).join(", "))})`,
+    ),
+    // Same rules as the old permissions; set exactly for deny_list.
+    check(
+      "api_tokens_base_permissions_check",
+      sql`cardinality(${table.basePermissions}) > 0 and array_ndims(${table.basePermissions}) = 1 and ${table.basePermissions} <@ ${permissionList}`,
+    ),
+    check(
+      "api_tokens_base_permissions_mode_check",
+      sql`(${table.accessMode} = 'deny_list') = (${table.basePermissions} is not null)`,
     ),
     // An empty scope would be ambiguous (nothing or everything); null means everything.
     check(

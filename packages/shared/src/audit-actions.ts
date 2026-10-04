@@ -67,6 +67,21 @@ export const AUDIT_ACTIONS = {
   ),
   "folder.deleted_permanently": folder("A folder in the trash was deleted for good."),
   "folder.purged": folder("The server deleted a folder for good after the retention.", "success"),
+  "note.locked": note("A note was locked: agents can no longer change it (reason in reason)."),
+  "note.unlocked": note("A person lifted a note's lock."),
+  "folder.locked": folder(
+    "A folder was locked with everything below it, also what is created there later.",
+  ),
+  "folder.unlocked": folder("A person lifted a folder's lock."),
+  "note.hidden": note(
+    "A note was hidden: agents can no longer read its content or change it (reason in reason).",
+  ),
+  "note.unhidden": note("A person made a hidden note visible to agents again."),
+  "folder.hidden": folder(
+    "A folder was hidden: everything below it, also what is created there later, no longer " +
+      "exists for agents.",
+  ),
+  "folder.unhidden": folder("A person made a hidden folder visible to agents again."),
   "trash.emptied": other("trash", "An administrator emptied the whole trash."),
   "read.overview": other(null, "An agent read the overview (get_overview)."),
   "read.folder": other("folder", "An agent listed a folder or the root level."),
@@ -78,6 +93,13 @@ export const AUDIT_ACTIONS = {
   "read.revisions": note("An agent listed a note's revisions."),
   "read.revision": note("An agent read one revision of a note."),
   "read.trash": other("trash", "An agent listed the trash."),
+  "read.locked": other(null, "An agent listed the locked notes and folders."),
+  "read.hidden": other(
+    null,
+    "A request to list the hidden notes and folders was refused (people only; their own " +
+      "reads are not logged).",
+    "failure",
+  ),
   "auth.sign_in": other("user", "A person signed in; a session started.", "success"),
   "auth.sign_in_failed": other(
     "user",
@@ -105,6 +127,16 @@ export const AUDIT_ACTIONS = {
   "two_factor.recovery_codes_regenerated": other("user", "A new set of recovery codes was made."),
   "token.created": other("token", "An API token was created (the token itself is never logged)."),
   "token.revoked": other("token", "An API token was revoked."),
+  "token.updated": other(
+    "token",
+    "An API token's access mode, entries, base permissions or expiry were changed (before " +
+      "and after in details).",
+  ),
+  "token.entry_removed": other(
+    "token",
+    "The server removed an entry of an API token because its target was deleted for good.",
+    "success",
+  ),
   "setup.admin_created": other("user", "The setup wizard created the first administrator."),
   "settings.changed": other("settings", "System settings were changed (old and new values)."),
   "audit.read": other(
