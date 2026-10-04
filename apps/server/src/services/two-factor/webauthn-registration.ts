@@ -37,7 +37,9 @@ export function registrationOptions(
 ): Promise<Outcome<PublicKeyCredentialCreationOptionsJSON>> {
   const config = enabledWebauthn();
   if (isWebauthnRefusal(config)) return Promise.resolve(config);
-  return withFactorScope(ref, now, {}, async (scope) => {
+  // Not logged on success (no key yet); a refusal is, as a failed add.
+  const options = { action: "two_factor.security_key_added" } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
     const userId = scope.actor.userId;
     const [user] = await scope.tx
       .select({ email: users.email, displayName: users.displayName })
@@ -84,7 +86,8 @@ export function verifyRegistration(
 ): Promise<Outcome<KeyAdded>> {
   const config = enabledWebauthn();
   if (isWebauthnRefusal(config)) return Promise.resolve(config);
-  return withFactorScope(ref, now, {}, async (scope) => {
+  const options = { action: "two_factor.security_key_added" } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
     const userId = scope.actor.userId;
     const challenge = signedChallenge(input.response);
     const ceremony = challenge
@@ -126,10 +129,15 @@ export function verifyRegistration(
       .onConflictDoNothing({ target: webauthnCredentials.credentialId })
       .returning();
     if (!row) return refuse("credential_exists");
+    const recoveryCodes = await recoveryCodesForNewFactor(scope, now);
+    await scope.record({
+      target: { kind: "security_key", id: row.id, label: row.name },
+      details: { deviceType, recoveryCodeCount: recoveryCodes?.length ?? 0 },
+    });
     return succeed({
       userId,
       credential: credentialSummary(row),
-      recoveryCodes: await recoveryCodesForNewFactor(scope, now),
+      recoveryCodes,
       completesEnrolment: await finishEnrolment(scope, now),
       remember: scope.actor.remember,
     });

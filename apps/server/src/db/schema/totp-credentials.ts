@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 import { users } from "./users";
 
 // A user's authenticator app (TOTP, RFC 6238): at most one per user.
 export const totpCredentials = pgTable(
   "totp_credentials",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     // Deleting a user removes the credential. The unique constraint also
     // indexes lookups by user.
     userId: uuid("user_id")

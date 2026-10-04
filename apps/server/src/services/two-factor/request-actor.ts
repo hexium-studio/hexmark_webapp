@@ -1,7 +1,9 @@
+import type { AuditAction } from "@hexmark/shared";
 import type { Context } from "hono";
 import { serverNotConfigured } from "../../config/secrets";
 import { getDbStatus } from "../../db/status";
 import { failureResponse } from "../../lib/outcome";
+import { logRefusedInput } from "../audit/refused-input";
 import { sessionFromRequest } from "../sessions/session-auth";
 import type { ActorRef } from "./actor";
 import { challengeTokenHash, readChallengeToken } from "./challenges";
@@ -27,6 +29,19 @@ export async function sessionActor(c: Context, now: Date): Promise<ActorRef | Re
   const info = await sessionFromRequest(c, now);
   if (!info) return failureResponse(c, refuse("unauthenticated"));
   return { kind: "session", sessionId: info.sessionId };
+}
+
+// Invalid input to a factor endpoint, logged for a signed-in person (sessions
+// only: a challenge names its account only once it is locked). Only the
+// field codes are kept, never what was sent (codes, key answers).
+export async function logFactorInput(
+  c: Context,
+  actor: ActorRef,
+  action: AuditAction,
+  response: Response,
+): Promise<void> {
+  if (actor.kind !== "session") return;
+  await logRefusedInput(c, { kind: "session", sessionId: actor.sessionId }, action, response, {});
 }
 
 // `Authorization: Challenge <token>`; whether the challenge is usable for

@@ -3,19 +3,25 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { users } from "../../db/schema";
 import { fail, type Outcome, succeed } from "../../lib/outcome";
-import { authUserColumns, createSession } from "./sessions";
+import { authUserColumns, createSession, type SignInMethod } from "./sessions";
 import { signInRefusalFailure } from "./sign-in-policy";
 
 // The last step of a sign-in that needed a second factor (or a first one,
 // forced): the factor is proven, now the session starts. createSession still
 // decides whether it may (e.g. not while SETUP_TOKEN is set).
 export async function completeSignIn(
-  proven: { userId: string; remember: boolean },
+  proven: { userId: string; remember: boolean; method: SignInMethod },
   userAgent: string | null,
   now: Date,
 ): Promise<Outcome<SignedInResponse>> {
   const created = await createSession(
-    { userId: proven.userId, remember: proven.remember, userAgent, secondFactorVerified: true },
+    {
+      userId: proven.userId,
+      remember: proven.remember,
+      userAgent,
+      secondFactorVerified: true,
+      method: proven.method,
+    },
     now,
   );
   if (created.status === "refused") return signInRefusalFailure(created.reason);

@@ -1,0 +1,2 @@
+ALTER TABLE "note_revisions" ADD COLUMN "section_path" text;--> statement-breakpoint
+ALTER TABLE "note_revisions" ADD CONSTRAINT "note_revisions_section_path_check" CHECK (char_length("note_revisions"."section_path") between 1 and 1000 and "note_revisions"."section_path" ~ '[^[:space:]]');

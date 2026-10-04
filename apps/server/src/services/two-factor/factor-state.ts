@@ -43,25 +43,26 @@ export async function countUnusedRecoveryCodes(tx: Transaction, userId: string):
 
 // Locks the instance settings row ("share" to read the requirement, "update"
 // to change it) and then the user's row ("update" to change factors, "share"
-// to rely on them). Returns whether the instance requires a second factor;
-// before setup wrote the row, it does not. Null when the user is gone.
+// to rely on them). Returns whether the instance requires a second factor
+// (before setup wrote the row, it does not) and the username (for the audit
+// log). Null when the user is gone.
 export async function lockFactorOwner(
   tx: Transaction,
   userId: string,
   modes: { settings: "share" | "update"; user: "share" | "update" },
-): Promise<{ requireTwoFactor: boolean } | null> {
+): Promise<{ requireTwoFactor: boolean; username: string } | null> {
   const [settings] = await tx
     .select({ requireTwoFactor: instanceSettings.requireTwoFactor })
     .from(instanceSettings)
     .where(eq(instanceSettings.id, 1))
     .for(modes.settings);
   const [user] = await tx
-    .select({ id: users.id })
+    .select({ id: users.id, username: users.username })
     .from(users)
     .where(eq(users.id, userId))
     .for(modes.user);
   if (!user) return null;
-  return { requireTwoFactor: settings?.requireTwoFactor ?? false };
+  return { requireTwoFactor: settings?.requireTwoFactor ?? false, username: user.username };
 }
 
 export type SignInRequirement = "none" | "second_factor" | "enrolment";

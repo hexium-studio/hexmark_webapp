@@ -36,6 +36,41 @@
       "when": 1791023274007,
       "tag": "0004_two_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791049858078,
+      "tag": "0005_notes_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791055104979,
+      "tag": "0006_revision_section",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791057791921,
+      "tag": "0007_trash",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791096388421,
+      "tag": "0008_uuid_v7",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791098895871,
+      "tag": "0009_audit_events",
+      "breakpoints": true
     }
   ]
 }

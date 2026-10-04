@@ -7,6 +7,8 @@ import {
 } from "../../config/session";
 import { getDb, type Transaction } from "../../db/client";
 import { SESSION_USER_AGENT_MAX_LENGTH, sessions, users } from "../../db/schema";
+import { personActor } from "../audit/actor";
+import { recordEvent } from "../audit/record";
 import { countFactors, lockFactorOwner, signInRequirement } from "../two-factor/factor-state";
 import { evaluateSessionUse, type TokenMatch } from "./session-rules";
 import { hashSessionToken, newSessionToken } from "./session-token";
@@ -33,6 +35,9 @@ export type CreateSessionResult =
   | { status: "second_factor_required" }
   | { status: "enrolment_required" };
 
+// How the person proved who they are, for the audit log.
+export type SignInMethod = "password" | "totp" | "webauthn" | "recovery_code" | "enrolment";
+
 export interface NewSessionInput {
   userId: string;
   remember: boolean;
@@ -40,12 +45,14 @@ export interface NewSessionInput {
   // The caller verified a second factor (or recovery code) of this user,
   // or the user just added their first one.
   secondFactorVerified: boolean;
+  method: SignInMethod;
 }
 
 // The one place sessions are created. Whether the password alone suffices
 // is decided here, under the locks of factor-state.ts and in the transaction
 // that inserts the session, so no way of signing in can skip the second
-// factor and a factor added meanwhile is seen.
+// factor and a factor added meanwhile is seen. The sign-in is logged in the
+// same transaction (auth.sign_in).
 export async function createSession(
   input: NewSessionInput,
   now: Date,
@@ -66,16 +73,31 @@ export async function createSession(
     }
     const { token, hash } = newSessionToken();
     const expiresAt = new Date(now.getTime() + durations.maxAgeMs);
-    await tx.insert(sessions).values({
-      userId: input.userId,
-      tokenHash: hash,
-      remember: input.remember,
-      createdAt: now,
-      lastSeenAt: now,
-      rotatedAt: now,
-      expiresAt,
-      userAgent: input.userAgent?.slice(0, SESSION_USER_AGENT_MAX_LENGTH) ?? null,
-    });
+    const [session] = await tx
+      .insert(sessions)
+      .values({
+        userId: input.userId,
+        tokenHash: hash,
+        remember: input.remember,
+        createdAt: now,
+        lastSeenAt: now,
+        rotatedAt: now,
+        expiresAt,
+        userAgent: input.userAgent?.slice(0, SESSION_USER_AGENT_MAX_LENGTH) ?? null,
+      })
+      .returning({ id: sessions.id });
+    const actor = personActor({ id: input.userId, username: owner.username });
+    await recordEvent(
+      tx,
+      {
+        actor,
+        source: "web",
+        action: "auth.sign_in",
+        target: { kind: "user", id: input.userId, label: owner.username },
+        details: { method: input.method, remember: input.remember, sessionId: session?.id },
+      },
+      now,
+    );
     return { status: "created", token, expiresAt } as const;
   });
 }
@@ -154,6 +176,18 @@ export async function revokeSession(
     if (!locked) return false;
     if (!evaluateSessionUse(locked.session, locked.match, now, durations).valid) return false;
     await tx.update(sessions).set({ revokedAt: now }).where(eq(sessions.id, locked.session.id));
+    const { user } = locked;
+    await recordEvent(
+      tx,
+      {
+        actor: personActor(user),
+        source: "web",
+        action: "auth.sign_out",
+        target: { kind: "user", id: user.id, label: user.username },
+        details: { sessionId: locked.session.id },
+      },
+      now,
+    );
     return true;
   });
 }

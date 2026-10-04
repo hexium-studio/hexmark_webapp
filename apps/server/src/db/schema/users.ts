@@ -1,6 +1,7 @@
 import { DEFAULT_LOCALE, LOCALE_PATTERN, type Locale, USER_ROLES } from "@hexmark/shared";
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 
 // Role presets (USER_ROLES in @hexmark/shared); explicit permissions are
 // added in a later migration. Changing the list needs a migration of
@@ -25,7 +26,7 @@ export const timezoneCheckPattern = sql.raw(`'^[^[:space:]]{1,64}$'`);
 export const users = pgTable(
   "users",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     email: text("email").notNull().unique("users_email_unique"),
     username: text("username").notNull().unique("users_username_unique"),
     displayName: text("display_name").notNull(),

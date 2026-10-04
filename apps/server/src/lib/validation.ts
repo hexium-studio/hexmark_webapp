@@ -38,12 +38,25 @@ export async function readJsonBody(c: Context): Promise<unknown> {
   }
 }
 
+// Checks the query string against `schema`: the parsed value, or the 400
+// response to send.
+export function parseQuery<T>(c: Context, schema: z.ZodType<T>): ParsedBody<T> {
+  const parsed = schema.safeParse(c.req.query());
+  if (parsed.success) return { ok: true, data: parsed.data };
+  return { ok: false, response: c.json(zodValidationError(parsed.error), 400) };
+}
+
 export type ParsedBody<T> = { ok: true; data: T } | { ok: false; response: Response };
 
 // Reads the JSON body and checks it against `schema`: the parsed value, or
-// the 400 response to send.
-export async function parseJsonBody<T>(c: Context, schema: z.ZodType<T>): Promise<ParsedBody<T>> {
-  const body = await readJsonBody(c);
+// the 400 response to send. `optional`: a request without a body counts as
+// an empty object (for bodies whose fields are all optional).
+export async function parseJsonBody<T>(
+  c: Context,
+  schema: z.ZodType<T>,
+  optional = false,
+): Promise<ParsedBody<T>> {
+  const body = optional && (await c.req.raw.clone().text()) === "" ? {} : await readJsonBody(c);
   if (!isJsonObject(body)) return { ok: false, response: c.json(invalidBodyError(), 400) };
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

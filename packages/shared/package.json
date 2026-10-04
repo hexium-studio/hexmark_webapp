@@ -16,6 +16,10 @@
       "types": "./src/translation-files.ts",
       "default": "./src/translation-files.ts"
     },
+    "./mcp": {
+      "types": "./src/mcp/index.ts",
+      "default": "./src/mcp/index.ts"
+    },
     "./internal-calls": {
       "types": "./src/internal-calls.ts",
       "default": "./src/internal-calls.ts"

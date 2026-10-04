@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 import { users } from "./users";
 
 // Single-use recovery codes, the fallback when no second factor is at hand.
@@ -8,7 +9,7 @@ import { users } from "./users";
 export const recoveryCodes = pgTable(
   "recovery_codes",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     // Deleting a user removes their codes.
     userId: uuid("user_id")
       .notNull()

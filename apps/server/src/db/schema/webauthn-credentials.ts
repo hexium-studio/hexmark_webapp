@@ -10,6 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 import { users } from "./users";
 
 // Longest name a user can give a security key.
@@ -26,7 +27,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const webauthnCredentials = pgTable(
   "webauthn_credentials",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     // Deleting a user removes their keys.
     userId: uuid("user_id")
       .notNull()

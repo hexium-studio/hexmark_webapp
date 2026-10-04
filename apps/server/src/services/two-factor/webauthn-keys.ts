@@ -26,21 +26,34 @@ export function renameKey(
   now: Date,
 ): Promise<Outcome<WebauthnCredentialSummary>> {
   if (!UUID_PATTERN.test(id)) return Promise.resolve(refuse("credential_not_found"));
-  return withFactorScope(ref, now, {}, async (scope) => {
+  const options = { action: "two_factor.security_key_renamed" } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
+    const [before] = await scope.tx
+      .select({ name: webauthnCredentials.name })
+      .from(webauthnCredentials)
+      .where(ownKey(scope, id))
+      .for("update");
+    if (!before) return refuse("credential_not_found");
     const [row] = await scope.tx
       .update(webauthnCredentials)
       .set({ name })
       .where(ownKey(scope, id))
       .returning();
-    return row ? succeed(credentialSummary(row)) : refuse("credential_not_found");
+    if (!row) return refuse("credential_not_found");
+    await scope.record({
+      target: { kind: "security_key", id: row.id, label: row.name },
+      details: { previousName: before.name, name: row.name },
+    });
+    return succeed(credentialSummary(row));
   });
 }
 
 export function removeKey(ref: ActorRef, id: string, now: Date): Promise<Outcome<{ ok: true }>> {
   if (!UUID_PATTERN.test(id)) return Promise.resolve(refuse("credential_not_found"));
-  return withFactorScope(ref, now, { reauthenticate: true }, async (scope) => {
+  const options = { reauthenticate: true, action: "two_factor.security_key_removed" } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
     const [row] = await scope.tx
-      .select({ id: webauthnCredentials.id })
+      .select({ id: webauthnCredentials.id, name: webauthnCredentials.name })
       .from(webauthnCredentials)
       .where(ownKey(scope, id));
     if (!row) return refuse("credential_not_found");
@@ -49,6 +62,7 @@ export function removeKey(ref: ActorRef, id: string, now: Date): Promise<Outcome
     if (refusal) return refusal;
     await scope.tx.delete(webauthnCredentials).where(ownKey(scope, id));
     await afterFactorRemoved(scope, after);
+    await scope.record({ target: { kind: "security_key", id: row.id, label: row.name } });
     return succeed({ ok: true } as const);
   });
 }

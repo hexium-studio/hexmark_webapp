@@ -47,6 +47,14 @@ services:
       # http://localhost). Without it, security keys and passkeys are not
       # offered; authenticator apps work regardless (see .env.example).
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      # Optional: the address agents use for /mcp, shown with a new API token
+      # (docs/mcp.md), and the reading budget per section.
+      MCP_PUBLIC_URL: ${MCP_PUBLIC_URL:-}
+      SECTION_TOKEN_BUDGET: ${SECTION_TOKEN_BUDGET:-}
+      # Optional: days deleted notes and folders stay in the trash (default 28).
+      TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-}
+      # Optional: days the audit log keeps its events (default 365).
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-}
     ports:
       - "${SERVER_PORT:-3001}:3001"
     depends_on:
@@ -61,6 +69,9 @@ services:
       PORT: 3000
       # Server-to-server URL of the API (setup wizard, later all API calls).
       SERVER_INTERNAL_URL: http://server:3001
+      # Published port of the API server: without MCP_PUBLIC_URL the web app
+      # builds the MCP address shown with a new API token from it (docs/mcp.md).
+      SERVER_PORT: ${SERVER_PORT:-3001}
       # Reverse proxies whose forwarding headers are believed; empty means
       # none (docs/deployment.md).
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}

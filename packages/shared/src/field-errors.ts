@@ -6,8 +6,12 @@ import type { z } from "zod";
 // turns a failed parse into the shape the API sends.
 
 export const FIELD_ERROR_CODES = [
-  // No value was sent (or only whitespace where a value is trimmed).
+  // No value was sent (or only whitespace where a value is trimmed and the
+  // form treats a blank field as not filled in).
   "required",
+  // A value was sent, but it is empty or only whitespace where a value is
+  // trimmed (the notes API and MCP tell this apart from a missing value).
+  "empty",
   // A value was sent, but not of the expected type (e.g. a number for a text field).
   "invalid_type",
   // params: { min } – shortest allowed length.

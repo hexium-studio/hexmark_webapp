@@ -8,6 +8,7 @@ import { failureResponse, sendOutcome } from "../../lib/outcome";
 import { parseJsonBody } from "../../lib/validation";
 import { completeSignIn } from "../sessions/complete-sign-in";
 import type { ActorRef } from "./actor";
+import { logFactorInput } from "./request-actor";
 import { confirmTotp, type FactorAdded, startTotp } from "./totp-factor";
 import { registrationOptions, verifyRegistration } from "./webauthn-registration";
 
@@ -37,7 +38,7 @@ async function factorAddedResponse(
   };
   if (!added.completesEnrolment) return c.json(body, 200);
   const signedIn = await completeSignIn(
-    { userId: added.userId, remember: added.remember },
+    { userId: added.userId, remember: added.remember, method: "enrolment" },
     c.req.header("user-agent") ?? null,
     now,
   );
@@ -60,7 +61,10 @@ export function totpConfirmHandler(resolve: ResolveActor) {
     const actor = await resolve(c, now);
     if (actor instanceof Response) return actor;
     const body = await parseJsonBody(c, totpCodeInputSchema);
-    if (!body.ok) return body.response;
+    if (!body.ok) {
+      await logFactorInput(c, actor, "two_factor.totp_added", body.response);
+      return body.response;
+    }
     const outcome = await confirmTotp(actor, body.data.code, now);
     if (!outcome.ok) return failureResponse(c, outcome);
     return factorAddedResponse(c, outcome.value, now);
@@ -84,7 +88,10 @@ export function registrationVerifyHandler(resolve: ResolveActor) {
     const actor = await resolve(c, now);
     if (actor instanceof Response) return actor;
     const body = await parseJsonBody(c, webauthnRegistrationInputSchema);
-    if (!body.ok) return body.response;
+    if (!body.ok) {
+      await logFactorInput(c, actor, "two_factor.security_key_added", body.response);
+      return body.response;
+    }
     const outcome = await verifyRegistration(actor, body.data, now);
     if (!outcome.ok) return failureResponse(c, outcome);
     return factorAddedResponse(c, outcome.value, now);

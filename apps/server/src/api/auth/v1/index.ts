@@ -98,7 +98,8 @@ import { postSecondFactorWebauthnVerify } from "./second-factor/webauthn/verify"
 //   as on the account endpoints.
 //
 // POST /reauthenticate  header Authorization: Session <token>, body { password }
-//   Confirms the password for sensitive account actions in this session.
+//   Confirms the password for sensitive actions in this session (removing
+//   a factor, new recovery codes, creating an API token).
 //   200 { ok: true, reauthenticatedUntil }  ISO 8601, 10 minutes from now
 //   400 validation: password: required | invalid_type
 //   401 { error: "unauthenticated" }   no live session

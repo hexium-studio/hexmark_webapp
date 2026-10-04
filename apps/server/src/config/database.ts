@@ -18,3 +18,7 @@ export const MIGRATION_RETRY_INTERVAL_MS = 5_000;
 
 // Upper bound for a live reachability check (e.g. the setup status).
 export const DB_LIVE_CHECK_TIMEOUT_MS = 2_000;
+
+// Oldest PostgreSQL the server runs on (server_version_num): 18 brings the
+// built-in uuidv7() used for new ids (migration 0008).
+export const MIN_POSTGRES_VERSION_NUM = 180_000;

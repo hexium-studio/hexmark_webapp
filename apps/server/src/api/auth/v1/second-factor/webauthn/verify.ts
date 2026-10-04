@@ -12,5 +12,5 @@ export async function postSecondFactorWebauthnVerify(c: Context): Promise<Respon
   const body = await parseJsonBody(c, webauthnAuthenticationInputSchema);
   if (!body.ok) return body.response;
   const check = checkWebauthn(body.data.response, context.now);
-  return sendSignIn(c, await proveSecondFactor(context, "webauthn_failed", check));
+  return sendSignIn(c, await proveSecondFactor(context, "webauthn", "webauthn_failed", check));
 }

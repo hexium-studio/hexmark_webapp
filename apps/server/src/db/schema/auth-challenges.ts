@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 import { users } from "./users";
 
 // What a challenge authorises. Changing the list needs a migration of
@@ -31,7 +32,7 @@ export const authChallengePurposes = [
 export const authChallenges = pgTable(
   "auth_challenges",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     // Deleting a user removes their open challenges.
     userId: uuid("user_id")
       .notNull()

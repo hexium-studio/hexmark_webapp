@@ -1,10 +1,29 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import { MIGRATION_CONNECT_TIMEOUT_SECONDS, MIGRATION_RETRY_INTERVAL_MS } from "../config/database";
+import {
+  MIGRATION_CONNECT_TIMEOUT_SECONDS,
+  MIGRATION_RETRY_INTERVAL_MS,
+  MIN_POSTGRES_VERSION_NUM,
+} from "../config/database";
 import type { DatabaseConfig, DatabaseConnection } from "../config/env";
 import { describeError } from "../lib/errors";
 import { classifyDbError, setDbStatus } from "./status";
+
+// Refuses PostgreSQL older than MIN_POSTGRES_VERSION_NUM before any
+// migration runs, with a message that says what to do (migration 0008 checks
+// the same for runs outside the server, such as drizzle-kit migrate).
+export async function requireSupportedVersion(client: postgres.Sql): Promise<void> {
+  const [row] = await client<{ num: number; version: string }[]>`
+    select current_setting('server_version_num')::int as num,
+      current_setting('server_version') as version
+  `;
+  if (row && row.num >= MIN_POSTGRES_VERSION_NUM) return;
+  setDbStatus({ reachable: true, migrated: false, reason: "PostgreSQL 18 or newer required" });
+  throw new Error(
+    `Hexmark needs PostgreSQL 18 or newer, this server runs ${row?.version ?? "an unknown version"}. Upgrade PostgreSQL as described in docs/deployment.md`,
+  );
+}
 
 // One attempt: connect, then apply all pending migrations from
 // `migrationsFolder` (drizzle-kit output). Applied migrations are recorded in
@@ -25,6 +44,7 @@ async function attempt(connection: DatabaseConnection, migrationsFolder: string)
       throw error;
     }
     setDbStatus({ reachable: true, migrated: false });
+    await requireSupportedVersion(client);
     try {
       await migrate(drizzle({ client }), { migrationsFolder });
     } catch (error) {

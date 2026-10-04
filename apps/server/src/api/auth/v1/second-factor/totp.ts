@@ -11,5 +11,5 @@ export async function postSecondFactorTotp(c: Context): Promise<Response> {
   const body = await parseJsonBody(c, totpCodeInputSchema);
   if (!body.ok) return body.response;
   const check = checkTotp(body.data.code, context.now);
-  return sendSignIn(c, await proveSecondFactor(context, "invalid_code", check));
+  return sendSignIn(c, await proveSecondFactor(context, "totp", "invalid_code", check));
 }

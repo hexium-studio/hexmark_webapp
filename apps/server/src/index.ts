@@ -3,13 +3,19 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { api } from "./api";
 import { reportSetupTokenFormat, reportSetupTokenState } from "./api/setup/_lib/setup-token-report";
+import { reportAuditConfig } from "./config/audit";
 import { env } from "./config/env";
+import { MCP_PATH, reportMcpConfig } from "./config/mcp";
+import { reportNotesConfig } from "./config/notes";
 import { reportInstanceSecrets } from "./config/secrets";
 import { reportSessionConfig } from "./config/session";
+import { reportTrashConfig } from "./config/trash";
 import { reportWebauthnConfig } from "./config/webauthn";
 import { startMigrations } from "./db/migrate";
 import { describeError } from "./lib/errors";
+import { mcp } from "./mcp";
 import { warmUpPasswordVerification } from "./services/password";
+import { startTrashPurgeJob } from "./services/trash/purge-job";
 
 // Resolved from this entry file: src/index.ts under tsx (pnpm dev) and
 // dist/index.js in the tsup bundle both sit one level below the folder that
@@ -22,6 +28,7 @@ const app = new Hono();
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 app.route("/api", api);
+app.route(MCP_PATH, mcp);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 
@@ -40,12 +47,20 @@ reportSetupTokenFormat();
 reportSessionConfig();
 reportInstanceSecrets();
 reportWebauthnConfig();
+reportNotesConfig();
+reportMcpConfig();
+reportTrashConfig();
+reportAuditConfig();
 warmUpPasswordVerification();
 
 // The server listens even without a database so the setup wizard can report
 // its state (src/db/status.ts). Endpoints that use tables must check
-// getDbStatus().migrated first.
-startMigrations(env.database, MIGRATIONS_FOLDER, reportSetupTokenState);
+// getDbStatus().migrated first. Once the tables are ready, the purge of the
+// trash and the audit log starts (then hourly).
+startMigrations(env.database, MIGRATIONS_FOLDER, async () => {
+  startTrashPurgeJob();
+  await reportSetupTokenState();
+});
 
 // Docker sends SIGTERM on stop; close open connections and exit cleanly.
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

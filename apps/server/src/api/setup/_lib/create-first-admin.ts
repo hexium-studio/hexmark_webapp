@@ -2,6 +2,8 @@ import type { SetupInput } from "@hexmark/shared";
 import { sql } from "drizzle-orm";
 import { getDb } from "../../../db/client";
 import { instanceSettings, users } from "../../../db/schema";
+import { personActor } from "../../../services/audit/actor";
+import { recordEvent } from "../../../services/audit/record";
 import { hashPassword } from "../../../services/password";
 import { type IssuedChallengeRow, issueChallenge } from "../../../services/two-factor/challenges";
 
@@ -10,7 +12,8 @@ import { type IssuedChallengeRow, issueChallenge } from "../../../services/two-f
 // requests are serialised and the second one sees the first one's user. The
 // same transaction stores the chosen locale on the admin and as the instance
 // default, so there is never an admin without instance settings or the reverse,
-// and issues the setup enrolment ticket.
+// and issues the setup enrolment ticket. The audit log records it in the same
+// transaction (setup.admin_created; the e-mail is not logged).
 
 // Arbitrary constant that identifies the setup lock among advisory locks.
 const SETUP_LOCK_KEY = 7_316_101;
@@ -62,6 +65,17 @@ export async function createFirstAdmin(input: SetupInput): Promise<CreateAdminRe
         })
         .returning({ id: users.id });
       if (!admin) throw new Error("admin insert returned no row");
+      await recordEvent(
+        tx,
+        {
+          actor: personActor({ id: admin.id, username: input.username }),
+          source: "web",
+          action: "setup.admin_created",
+          target: { kind: "user", id: admin.id, label: input.username },
+          details: { role: "admin", locale: input.locale },
+        },
+        now,
+      );
       // Single row (id 1). An existing row (e.g. left by an earlier install
       // whose users were removed) keeps its created_at.
       await tx

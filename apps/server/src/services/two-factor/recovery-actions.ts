@@ -12,8 +12,14 @@ export function regenerateRecoveryCodes(
   ref: ActorRef,
   now: Date,
 ): Promise<Outcome<{ recoveryCodes: string[] }>> {
-  return withFactorScope(ref, now, { reauthenticate: true }, async (scope) => {
+  const options = {
+    reauthenticate: true,
+    action: "two_factor.recovery_codes_regenerated",
+  } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
     if (!hasAnyFactor(scope.before)) return refuse("second_factor_missing");
-    return succeed({ recoveryCodes: await issueRecoveryCodes(scope.tx, scope.actor.userId, now) });
+    const recoveryCodes = await issueRecoveryCodes(scope.tx, scope.actor.userId, now);
+    await scope.record({ details: { recoveryCodeCount: recoveryCodes.length } });
+    return succeed({ recoveryCodes });
   });
 }

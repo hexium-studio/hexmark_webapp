@@ -43,8 +43,10 @@ async function currentTotp(scope: FactorScope) {
   return row;
 }
 
+// The first step is not logged on success (nothing is a factor yet); a
+// refusal is, as a failure of adding the app.
 export function startTotp(ref: ActorRef, now: Date): Promise<Outcome<TotpStartResponse>> {
-  return withFactorScope(ref, now, {}, async (scope) => {
+  return withFactorScope(ref, now, { action: "two_factor.totp_added" }, async (scope) => {
     if (scope.before.totp) return refuse("totp_already_enabled");
     const userId = scope.actor.userId;
     const [user] = await scope.tx
@@ -86,7 +88,7 @@ export async function finishEnrolment(scope: FactorScope, now: Date): Promise<bo
 }
 
 export function confirmTotp(ref: ActorRef, code: string, now: Date): Promise<Outcome<FactorAdded>> {
-  return withFactorScope(ref, now, {}, async (scope) => {
+  return withFactorScope(ref, now, { action: "two_factor.totp_added" }, async (scope) => {
     const row = await currentTotp(scope);
     if (row?.confirmedAt) return refuse("totp_already_enabled");
     if (!row) return refuse("totp_not_pending");
@@ -97,9 +99,11 @@ export function confirmTotp(ref: ActorRef, code: string, now: Date): Promise<Out
       .update(totpCredentials)
       .set({ confirmedAt: now, lastUsedStep: step })
       .where(eq(totpCredentials.id, row.id));
+    const recoveryCodes = await recoveryCodesForNewFactor(scope, now);
+    await scope.record({ details: { recoveryCodeCount: recoveryCodes?.length ?? 0 } });
     return succeed({
       userId: row.userId,
-      recoveryCodes: await recoveryCodesForNewFactor(scope, now),
+      recoveryCodes,
       completesEnrolment: await finishEnrolment(scope, now),
       remember: scope.actor.remember,
     });
@@ -107,13 +111,15 @@ export function confirmTotp(ref: ActorRef, code: string, now: Date): Promise<Out
 }
 
 export function removeTotp(ref: ActorRef, now: Date): Promise<Outcome<{ ok: true }>> {
-  return withFactorScope(ref, now, { reauthenticate: true }, async (scope) => {
+  const options = { reauthenticate: true, action: "two_factor.totp_removed" } as const;
+  return withFactorScope(ref, now, options, async (scope) => {
     if (!scope.before.totp) return refuse("totp_not_enabled");
     const after = { ...scope.before, totp: false };
     const refusal = checkRemoval(scope, after);
     if (refusal) return refusal;
     await scope.tx.delete(totpCredentials).where(eq(totpCredentials.userId, scope.actor.userId));
     await afterFactorRemoved(scope, after);
+    await scope.record();
     return succeed({ ok: true } as const);
   });
 }

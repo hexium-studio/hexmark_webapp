@@ -7,12 +7,14 @@ import { authUserColumns, createSession } from "../../../services/sessions/sessi
 import { type SignInRefusal, signInRefusal } from "../../../services/sessions/sign-in-policy";
 import { reserveLoginAttempt } from "./login-attempts";
 import { enrolmentChallenge, secondFactorChallenge } from "./sign-in-challenge";
+import { logSignInFailed } from "./sign-in-log";
 
 // Sign-in with e-mail and password. Order: sign-in allowed at all (refused
 // while SETUP_TOKEN is set), rate limit, credentials, session. An unknown
 // e-mail and a wrong password give the same answer and take the same time:
 // both verify a password hash (see verifyPassword). Only those two count as
-// failed attempts.
+// failed attempts; they and refusals by the rate limit are logged as
+// auth.sign_in_failed (the e-mail itself never).
 //
 // Whether the password alone is enough is decided by createSession: when the
 // account has a second factor, or the instance requires one the account
@@ -39,6 +41,7 @@ export async function login(input: LoginInput, context: LoginContext): Promise<L
   const attempt = reserveLoginAttempt(context.address);
   if (!attempt) {
     console.warn("Sign-in refused: too many failed attempts (rate limit reached).");
+    await logSignInFailed(input.email, "rate_limited");
     return { status: "rate_limited" };
   }
   try {
@@ -48,12 +51,21 @@ export async function login(input: LoginInput, context: LoginContext): Promise<L
       .where(eq(users.email, input.email))
       .limit(1);
     const matches = await verifyPassword(account?.passwordHash ?? null, input.password);
-    if (!account || !matches) return { status: "invalid_credentials" };
+    if (!account || !matches) {
+      await logSignInFailed(input.email, "invalid_credentials", account ?? null);
+      return { status: "invalid_credentials" };
+    }
     attempt.release();
     const { passwordHash: _, ...user } = account;
     const { remember } = input;
     const created = await createSession(
-      { userId: user.id, remember, userAgent: context.userAgent, secondFactorVerified: false },
+      {
+        userId: user.id,
+        remember,
+        userAgent: context.userAgent,
+        secondFactorVerified: false,
+        method: "password",
+      },
       context.now,
     );
     const next = { userId: user.id, remember, now: context.now };

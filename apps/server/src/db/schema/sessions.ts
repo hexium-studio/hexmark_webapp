@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { idColumn } from "./id-column";
 import { users } from "./users";
 
 // Longest user agent string kept per session; the application truncates.
@@ -12,7 +13,7 @@ export const SESSION_USER_AGENT_MAX_LENGTH = 256;
 export const sessions = pgTable(
   "sessions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: idColumn(),
     // Deleting a user ends all of their sessions.
     userId: uuid("user_id")
       .notNull()

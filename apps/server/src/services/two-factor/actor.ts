@@ -2,7 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Transaction } from "../../db/client";
 import { sessions } from "../../db/schema";
 import type { Failure } from "../../lib/outcome";
-import { isRecentlyReauthenticated } from "../sessions/reauthentication";
+import { reauthenticationRefusal } from "../sessions/reauthentication";
 import { lockChallenge } from "./challenges";
 import { refuse } from "./refusals";
 
@@ -65,8 +65,6 @@ export function isFailure(value: LockedActor | Failure): value is Failure {
 // Sensitive actions: only from a session whose password was re-entered
 // recently. Challenges never qualify (they cannot reach these actions).
 export function requireRecentReauthentication(actor: LockedActor, now: Date): Failure | null {
-  if (actor.ref.kind !== "session") return refuse("reauthentication_required");
-  return isRecentlyReauthenticated(actor.reauthenticatedAt, now)
-    ? null
-    : refuse("reauthentication_required");
+  if (actor.ref.kind !== "session") return reauthenticationRefusal(null, now);
+  return reauthenticationRefusal(actor.reauthenticatedAt, now);
 }
