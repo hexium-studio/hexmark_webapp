@@ -13,6 +13,7 @@
     "message": "Der Server hat die Abmeldung nicht bestätigt. Die Sitzung endet nach ihrer Zeitbegrenzung von selbst."
   },
   "securityLink": "Sicherheitseinstellungen",
+  "tokensLink": "API-Tokens",
   "twoFactorMissing": {
     "title": "Zwei-Faktor-Authentifizierung ist nicht eingerichtet",
     "detail": "Das Konto mit einer Authenticator-App oder einem Sicherheitsschlüssel schützen.",

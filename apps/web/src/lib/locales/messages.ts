@@ -23,5 +23,6 @@ export type Messages = {
   setupComplete: typeof import("../../../messages/en/setupComplete.json");
   stepList: typeof import("../../../messages/en/stepList.json");
   toast: typeof import("../../../messages/en/toast.json");
+  tokens: typeof import("../../../messages/en/tokens.json");
   twoFactor: typeof import("../../../messages/en/twoFactor.json");
 };

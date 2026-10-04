@@ -12,9 +12,9 @@ import {
 } from "@/lib/two-factor/factor-result";
 
 // Changes on the account security page that are not about adding a factor
-// (those are in components/two-factor/actions.ts): confirming the password,
-// removing factors, renaming keys and new recovery codes. All act with the
-// session cookie; the password is never logged.
+// (components/two-factor/actions.ts) or confirming the password
+// (components/reauthentication): removing factors, renaming keys and new
+// recovery codes. All act with the session cookie.
 
 type Done = { ok: true } | FactorFailure;
 
@@ -37,24 +37,6 @@ async function done(path: string | undefined, request: ServerRequest): Promise<D
   const response = await send(path, request);
   if (!response) return factorFailure("unauthenticated");
   return okBody(response) ? { ok: true } : readFactorFailure(response);
-}
-
-export type ReauthenticateResult = { ok: true; until: string } | FactorFailure;
-
-// POST /api/auth/v1/reauthenticate: sensitive actions are allowed for the
-// next 10 minutes.
-export async function reauthenticate(password: string): Promise<ReauthenticateResult> {
-  const authorization = await sessionAuthorization();
-  if (!authorization) return factorFailure("unauthenticated");
-  const response = await callServer("/api/auth/v1/reauthenticate", {
-    method: "POST",
-    headers: { authorization },
-    body: { password: typeof password === "string" ? password : "" },
-  });
-  const body = okBody(response);
-  if (!body) return readFactorFailure(response);
-  const until = body.reauthenticatedUntil;
-  return typeof until === "string" ? { ok: true, until } : factorFailure("unexpected");
 }
 
 export async function removeAuthenticator(): Promise<Done> {

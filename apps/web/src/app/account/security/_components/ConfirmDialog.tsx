@@ -5,15 +5,11 @@ import { type FormEvent, useEffect, useRef, useState, useTransition } from "reac
 import { Button } from "@/components/button/Button";
 import { Dialog } from "@/components/dialog/Dialog";
 import { PasswordField } from "@/components/field/PasswordField";
+import { reauthenticate } from "@/components/reauthentication/actions";
+import { isRecentlyConfirmed } from "@/components/reauthentication/recent";
 import { useFactorToast } from "@/components/two-factor/use-factor-toast";
-import { reauthenticate } from "./account-actions";
 import styles from "./Security.module.css";
-import {
-  isRecentlyConfirmed,
-  performSensitive,
-  type SensitiveRequest,
-  type SensitiveResult,
-} from "./sensitive";
+import { performSensitive, type SensitiveRequest, type SensitiveResult } from "./sensitive";
 
 const TITLE_ID = "confirm-dialog-title";
 const PASSWORD_ID = "confirm-password";

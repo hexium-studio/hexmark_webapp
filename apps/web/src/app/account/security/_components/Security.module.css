@@ -104,8 +104,13 @@
   gap: var(--space-3);
 }
 
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
 .homeLink {
-  justify-self: start;
   display: inline-flex;
   align-items: center;
   min-height: var(--control-min-size);

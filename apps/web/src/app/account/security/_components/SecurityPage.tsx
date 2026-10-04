@@ -37,9 +37,14 @@ export function SecurityPage({ user, security }: SecurityPageProps) {
   const [confirmedUntil, setConfirmedUntil] = useState<string | null>(null);
 
   const home = (
-    <a href="/" className={styles.homeLink}>
-      {t("home")}
-    </a>
+    <div className={styles.links}>
+      <a href="/" className={styles.homeLink}>
+        {t("home")}
+      </a>
+      <a href="/account/tokens" className={styles.homeLink}>
+        {t("tokensLink")}
+      </a>
+    </div>
   );
 
   if (!security) {

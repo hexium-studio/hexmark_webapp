@@ -1,5 +1,6 @@
 {
   "required": "Dieses Feld ist erforderlich.",
+  "empty": "Dieses Feld darf nicht leer sein.",
   "invalid_type": "Dieser Wert ist ungültig.",
   "too_short": "Mindestens {min} Zeichen verwenden.",
   "too_long": "Höchstens {max} Zeichen verwenden.",
@@ -44,6 +45,11 @@
     "timezone": {
       "required": "Eine Zeitzone wählen.",
       "invalid_option": "Eine der angebotenen Zeitzonen wählen."
+    },
+    "tokenName": {
+      "required": "Einen Namen für das Token eingeben.",
+      "taken": "Ein Token mit diesem Namen gibt es schon (auch widerrufene zählen).",
+      "invalid_format": "Zeilenumbrüche und andere Steuerzeichen sind nicht erlaubt."
     }
   }
 }

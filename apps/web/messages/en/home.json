@@ -13,6 +13,7 @@
     "message": "The server did not confirm the sign-out. The session ends on its own after its timeout."
   },
   "securityLink": "Security settings",
+  "tokensLink": "API tokens",
   "twoFactorMissing": {
     "title": "Two-factor authentication is not set up",
     "detail": "Protect your account with an authenticator app or a security key.",

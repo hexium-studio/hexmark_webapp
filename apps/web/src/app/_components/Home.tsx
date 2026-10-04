@@ -16,10 +16,10 @@ export interface HomeProps {
   twoFactorMissing: boolean;
 }
 
-// Home of a signed-in user: greeting, role, the way to the security page
-// and "Sign out". No language picker here: a signed-in user's saved language
-// wins over the picker's cookie (lib/locales/resolve-locale.ts), so a picker
-// would change nothing.
+// Home of a signed-in user: greeting, role, the ways to the security and
+// token pages and "Sign out". No language picker here: a signed-in user's
+// saved language wins over the picker's cookie
+// (lib/locales/resolve-locale.ts), so a picker would change nothing.
 export function Home({ user, twoFactorMissing }: HomeProps) {
   const t = useTranslations("home");
   const tRoles = useTranslations("roles");
@@ -48,6 +48,9 @@ export function Home({ user, twoFactorMissing }: HomeProps) {
             {t("securityLink")}
           </ButtonLink>
         )}
+        <ButtonLink variant="secondary" href="/account/tokens">
+          {t("tokensLink")}
+        </ButtonLink>
         <SignOutButton />
       </div>
     </CardShell>

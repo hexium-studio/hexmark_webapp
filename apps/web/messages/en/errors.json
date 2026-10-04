@@ -1,5 +1,6 @@
 {
   "required": "This field is required.",
+  "empty": "This field must not be empty.",
   "invalid_type": "This value is not valid.",
   "too_short": "Use at least {min} characters.",
   "too_long": "Use at most {max} characters.",
@@ -44,6 +45,11 @@
     "timezone": {
       "required": "Choose a time zone.",
       "invalid_option": "Choose one of the offered time zones."
+    },
+    "tokenName": {
+      "required": "Enter a name for the token.",
+      "taken": "You already have a token with this name (revoked ones count too).",
+      "invalid_format": "Line breaks and other control characters are not allowed."
     }
   }
 }

@@ -3,6 +3,7 @@
   "title": "Sicherheit",
   "lead": "Zwei-Faktor-Authentifizierung für {name}.",
   "home": "Zurück zur Startseite",
+  "tokensLink": "API-Tokens für Agenten",
   "required": "Zwei-Faktor-Authentifizierung ist in dieser Hexmark-Installation Pflicht.",
   "lastFactor": "Das ist der letzte zweite Faktor des Kontos, und diese Installation verlangt einen. Zuerst einen weiteren Faktor hinzufügen, dann diesen entfernen.",
   "unavailable": {

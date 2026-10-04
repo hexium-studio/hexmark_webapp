@@ -1,0 +1,206 @@
+/* The token page (TokensPage.tsx) in the wide card, laid out like the
+   account security page: sections separated by a line. Every grid column
+   may shrink below its content (minmax(0, 1fr)), so long names, paths and
+   the configuration block wrap instead of widening the card. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.section + .section {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.state {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-size);
+  font-weight: 500;
+}
+
+/* The list: one framed row per token. */
+.tokens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.token {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+/* The full name: long names wrap anywhere instead of being cut off. */
+.tokenName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Term and value pairs in as many columns as fit (at least 11rem each). */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.facts > div {
+  min-width: 0;
+}
+
+.facts dt {
+  color: var(--color-text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The create form. */
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1-5);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  font-weight: 600;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
+.folders {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The checkbox's text may shrink, so a long folder path wraps. */
+.folders label > span {
+  min-width: 0;
+}
+
+.folderPath {
+  overflow-wrap: anywhere;
+}
+
+/* The one-time view of a new token. Warning tint and text colour as for
+   new recovery codes (>= 4.95:1 in both themes). */
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-tint);
+}
+
+/* Pretty-printed JSON; long values (the token) wrap inside the block. */
+.config {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-code-bg);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Dialogs (RevokeDialog.tsx, ReauthDialog.tsx). */
+.dialogForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* The token concerned, spelled out in full on its own line. */
+.subject {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-code-bg);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}

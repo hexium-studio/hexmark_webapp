@@ -3,6 +3,7 @@
   "title": "Security",
   "lead": "Two-factor authentication for {name}.",
   "home": "Back to home",
+  "tokensLink": "API tokens for agents",
   "required": "Two-factor authentication is required on this Hexmark installation.",
   "lastFactor": "This is your last second factor, and this installation requires one. Add another factor before removing it.",
   "unavailable": {
