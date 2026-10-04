@@ -20,8 +20,11 @@ of the same API.
 
 ## Deployment
 
-Reverse proxies, HTTPS, the instance keys in `.env` and backups:
-[docs/deployment.md](docs/deployment.md).
+Hexmark runs with Docker Compose and needs **PostgreSQL 18 or newer** (the
+compose files include it). Reverse proxies, HTTPS, the instance keys in
+`.env` and backups:
+[docs/deployment.md](docs/deployment.md). Connecting agents over MCP:
+[docs/mcp.md](docs/mcp.md).
 
 ## Contributing
 

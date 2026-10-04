@@ -6,21 +6,36 @@ import { firstMigrations, migrate } from "./migrations";
 // The SQL migrations (apps/server/drizzle) and the rules the database
 // enforces on its own, independent of the API's validation. The sessions
 // table (sessions-table.test.ts) and the two-factor tables
-// (two-factor-*.test.ts, migration-0004.test.ts) have their own files.
+// (two-factor-*.test.ts, migration-0004.test.ts) and the notes tables of
+// migration 0005 (folders-, notes-, note-revisions-, note-sections- and
+// api-tokens-table.test.ts, notes-deletions.test.ts, migration-0005.test.ts)
+// and the revision section path of migration 0006
+// (note-revisions-section-path.test.ts, migration-0006.test.ts) and the
+// trash columns of migration 0007 (trash-columns.test.ts,
+// migration-0007.test.ts) and the UUID version 7 ids of migration 0008
+// (migration-0008.test.ts, uuid-v7-api.test.ts) and the audit log of
+// migration 0009 (audit-events-*.test.ts, migration-0009.test.ts) have their
+// own files.
 
 describe("migrations", () => {
-  it("apply 0000-0004 on an empty database and are idempotent", async () => {
+  it("apply 0000-0009 on an empty database and are idempotent", async () => {
     const db = await newDatabase();
     await migrate(db);
     const applied = await db.sql`select count(*)::int as n from drizzle.__drizzle_migrations`;
-    expect(applied).toEqual([{ n: 5 }]);
+    expect(applied).toEqual([{ n: 10 }]);
     const tables = await db.sql`
       select table_name from information_schema.tables
       where table_schema = 'public' order by table_name
     `;
     expect(tables.map((row) => row.table_name)).toEqual([
+      "api_tokens",
+      "audit_events",
       "auth_challenges",
+      "folders",
       "instance_settings",
+      "note_revisions",
+      "note_sections",
+      "notes",
       "recovery_codes",
       "sessions",
       "totp_credentials",
@@ -58,7 +73,7 @@ describe("migrations", () => {
     const db = await newDatabase();
     await newServer(db);
     expect(await db.sql`select count(*)::int as n from drizzle.__drizzle_migrations`).toEqual([
-      { n: 5 },
+      { n: 10 },
     ]);
   });
 });

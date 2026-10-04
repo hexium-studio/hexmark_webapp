@@ -60,7 +60,7 @@ describe("migration 0004 on a database with existing rows", () => {
     const settings = await db.sql`select * from instance_settings`;
     const sessions = await db.sql`select * from sessions order by created_at`;
 
-    await migrate(db);
+    await migrate(db, firstMigrations(5));
 
     expect(await db.sql`select * from users order by username`).toEqual(
       users.map((row) => ({ ...row, timezone: null })),
@@ -74,7 +74,7 @@ describe("migration 0004 on a database with existing rows", () => {
     for (const table of NEW_TABLES) expect(await count(db, table)).toBe(0);
     expect(await count(db, "drizzle.__drizzle_migrations")).toBe(5);
 
-    await migrate(db);
+    await migrate(db, firstMigrations(5));
     expect(await count(db, "drizzle.__drizzle_migrations")).toBe(5);
   });
 
@@ -82,7 +82,7 @@ describe("migration 0004 on a database with existing rows", () => {
     const db = await newDatabase();
     await migrate(db, firstMigrations(4));
 
-    await migrate(db);
+    await migrate(db, firstMigrations(5));
 
     expect(await count(db, "users")).toBe(0);
     expect(await count(db, "instance_settings")).toBe(0);

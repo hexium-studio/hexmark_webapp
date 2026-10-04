@@ -13,6 +13,23 @@ Hexmark runs as three containers:
 | `server` | 3001 | `SERVER_PORT` (3001) | HTTP API and MCP server |
 | `db` | 5432 | no | PostgreSQL |
 
+## PostgreSQL 18 or newer
+
+Hexmark needs **PostgreSQL 18 or newer** (both compose files use
+`postgres:18`). New ids are UUID version 7 from PostgreSQL's built-in
+`uuidv7()`, which older versions lack. On an older server the API server
+logs `Hexmark needs PostgreSQL 18 or newer, this server runs …` and applies
+no migration; the setup wizard's connection check reports the database as
+not ready.
+
+Ids created before this change are UUID version 4 and stay as they are, so
+both versions exist side by side. Treat every id as an opaque string: do not
+read a time, an order or a version out of it.
+
+Upgrading an existing PostgreSQL 17 (or older) volume needs a dump and
+restore (`pg_dump` from the old version, `psql` into an empty PostgreSQL 18
+volume); PostgreSQL cannot open a data directory of an older major version.
+
 ## Instance keys
 
 Two keys in `.env` are required. Both compose files refuse to start without
@@ -76,6 +93,61 @@ PUBLIC_ORIGIN=https://wiki.example.com
   that is not a secure context (e.g. `http://192.168.1.10:3000`) hides the
   security key buttons and says why; the authenticator app and recovery
   codes still work there.
+
+## Agents and MCP (`MCP_PUBLIC_URL`)
+
+Agents connect to the API server's `/mcp` endpoint with an API token
+([docs/mcp.md](mcp.md)). After a user creates a token, Hexmark shows a ready
+client configuration with the endpoint's address. Set the address agents use
+when it differs from what the browser sees, e.g. behind a reverse proxy:
+
+```sh
+MCP_PUBLIC_URL=https://wiki.example.com/mcp
+```
+
+- It must be an absolute `http://` or `https://` URL whose path ends in
+  `/mcp`; anything else is logged at start-up and ignored.
+- Without it the web app uses the host name the browser used and
+  `SERVER_PORT` (e.g. `http://192.168.1.10:3001/mcp`), which fits a plain
+  Docker Compose setup on a home network.
+- `/mcp` is served by the API server (`SERVER_PORT`), not by the web app. A
+  reverse proxy must forward it there and must not buffer responses.
+
+## Trash (`TRASH_RETENTION_DAYS`)
+
+Deleting a note or a folder (by a person or an agent) moves it to the trash.
+The API server deletes what has been in the trash longer than the retention
+for good: once when it starts (after the database migrations) and then every
+hour, logging how many notes and folders it removed.
+
+```sh
+TRASH_RETENTION_DAYS=28
+```
+
+- Optional; default 28 days, allowed 1 to 3650. An item deleted at a given
+  time is purged once that many days have passed (with 28: on day 29). An
+  invalid value is logged at start-up and the default applies.
+- Several servers on one database do not purge twice: a database lock lets
+  one of them purge at a time.
+- Agents (API tokens) can never delete anything for good; signed-in people
+  can, through the HTTP API (`DELETE /api/notes/v1/trash/...`), and an
+  administrator can empty the whole trash. A database backup also holds the
+  trash.
+
+## Audit log (`AUDIT_RETENTION_DAYS`)
+
+The server records what people and agents do in an audit log (what is in it
+and how to read it: [audit.md](audit.md)). Events older than the retention are
+deleted by the same hourly job as the trash, which logs how many it removed.
+
+```sh
+AUDIT_RETENTION_DAYS=365
+```
+
+- Optional; default 365 days, allowed 1 to 3650. An invalid value is logged at
+  start-up and the default applies.
+- The log stores no IP addresses, passwords, tokens or note bodies. A database
+  backup holds it too.
 
 ## Client addresses
 
@@ -281,6 +353,8 @@ Back up both together; one without the other cannot restore encrypted data:
 
 Messages in `docker compose logs`:
 
+- `Hexmark needs PostgreSQL 18 or newer …` (server): upgrade the database as
+  described in [PostgreSQL 18 or newer](#postgresql-18-or-newer).
 - `Server configuration incomplete: INTERNAL_API_KEY is missing …` (server):
   set the named variables as described in [Instance keys](#instance-keys).
 - `INTERNAL_API_KEY is missing: browser addresses are not forwarded …` (web):

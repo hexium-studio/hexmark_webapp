@@ -67,8 +67,8 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
 
-      # Lint, typecheck, check:translations, build, unit, integration, e2e and
-      # a Docker build of both images (not pushed). Docker is preinstalled on
+      # Lint, typecheck, check:translations, check:docs, build, unit,
+      # integration, e2e and a Docker build of both images (not pushed). Docker is preinstalled on
       # ubuntu-latest.
       - name: Run all checks
         run: pnpm test:all

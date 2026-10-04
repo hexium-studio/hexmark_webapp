@@ -12,9 +12,9 @@ on `dev` the local `pre-push` hook and `pnpm test:all` do the checking (see
 | `.github/workflows/release.yml` | push of a tag `v*` | `verify tag` → `checks (fast)` → `image (server\|web, amd64\|arm64)` → `manifest (server)`, `manifest (web)` → `GitHub release` |
 
 **CI** (`checks`) runs `pnpm test:all`, the same command you run locally before
-opening a pull request: lint, typecheck, `check:translations`, build, unit,
-integration and e2e tests, and a Docker build of both images (not pushed). The
-list of checks lives only in `tools/run-checks.mjs`. On failure the job
+opening a pull request: lint, typecheck, `check:translations`, `check:docs`,
+build, unit, integration and e2e tests, and a Docker build of both images (not
+pushed). The list of checks lives only in `tools/run-checks.mjs`. On failure the job
 uploads `tests/.artifacts/` (Playwright traces and screenshots, server logs)
 as the artifact `test-artifacts-<run id>-<attempt>`. A new push to a pull
 request cancels the run still going for it; runs on `main` always finish.
@@ -25,7 +25,7 @@ request cancels the run still going for it; runs on `main` always finish.
    tagged commit must be on `main` (`git merge-base --is-ancestor`). Otherwise
    the run fails and nothing is published.
 2. `checks (fast)` – `node tools/run-checks.mjs release`: lint, typecheck,
-   `check:translations`, unit tests. The commit already passed the full CI on
+   `check:translations`, `check:docs`, unit tests. The commit already passed the full CI on
    its way into `main`; integration and e2e tests would cost minutes without
    new information, and the image builds compile everything again anyway.
 3. `image (<image>, <arch>)` – four parallel legs, one per image (`server`,

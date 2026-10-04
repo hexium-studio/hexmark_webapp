@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRecentlyConfirmed } from "@/app/account/security/_components/sensitive";
+import { isRecentlyConfirmed } from "@/components/reauthentication/recent";
 import { challengeCookieOptions, readChallengeToken } from "@/lib/challenge/cookie";
 import {
   encodePendingSession,

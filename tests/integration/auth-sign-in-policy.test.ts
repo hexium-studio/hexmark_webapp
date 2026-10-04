@@ -41,7 +41,7 @@ describe("createSession", () => {
     const count = async () => (await db.sql`select count(*)::int as n from sessions`)[0]?.n;
     expect(await count()).toBe(0);
     const result = await createSession(
-      { userId, remember: true, userAgent: null, secondFactorVerified: false },
+      { userId, remember: true, userAgent: null, secondFactorVerified: false, method: "password" },
       new Date(),
     );
     expect(result).toEqual({ status: "refused", reason: "setup_token_present" });
@@ -57,7 +57,13 @@ describe("createSession", () => {
       const count = async () => (await db.sql`select count(*)::int as n from sessions`)[0]?.n;
       expect(await count()).toBe(0);
       const result = await createSession(
-        { userId, remember: true, userAgent: null, secondFactorVerified: false },
+        {
+          userId,
+          remember: true,
+          userAgent: null,
+          secondFactorVerified: false,
+          method: "password",
+        },
         new Date(),
       );
       expect(result).toEqual({ status: "refused", reason: "server_not_configured" });

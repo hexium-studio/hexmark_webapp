@@ -82,7 +82,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Lint, typecheck, check:translations, unit tests.
+      # Lint, typecheck, check:translations, check:docs, unit tests.
       - name: Run fast checks
         run: node tools/run-checks.mjs release
 

@@ -117,6 +117,7 @@ describe("field error codes", () => {
   it("are the documented list", () => {
     expect(FIELD_ERROR_CODES).toEqual([
       "required",
+      "empty",
       "invalid_type",
       "too_short",
       "too_long",

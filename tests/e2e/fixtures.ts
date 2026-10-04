@@ -59,7 +59,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       let server: HexmarkServer = await start();
       let web: WebServer | undefined;
       try {
-        web = await startWebServer(server.url);
+        // SERVER_PORT as compose passes it: the MCP address shown with a new
+        // API token points at this worker's API server.
+        web = await startWebServer(server.url, { SERVER_PORT: String(server.port) });
         await use({
           db,
           webUrl: web.url,

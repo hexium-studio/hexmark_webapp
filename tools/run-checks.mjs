@@ -21,6 +21,7 @@ const STEPS = {
   lint: ["pnpm", "lint"],
   typecheck: ["pnpm", "typecheck"],
   "check:translations": ["pnpm", "check:translations"],
+  "check:docs": ["pnpm", "check:docs"],
   build: ["pnpm", "build"],
   "test:unit": ["pnpm", "test:unit"],
   "test:integration": ["pnpm", "test:integration"],
@@ -32,8 +33,15 @@ const STEPS = {
 
 const PROFILES = {
   all: Object.keys(STEPS),
-  "pre-push": ["lint", "typecheck", "check:translations", "test:unit", "test:integration"],
-  release: ["lint", "typecheck", "check:translations", "test:unit"],
+  "pre-push": [
+    "lint",
+    "typecheck",
+    "check:translations",
+    "check:docs",
+    "test:unit",
+    "test:integration",
+  ],
+  release: ["lint", "typecheck", "check:translations", "check:docs", "test:unit"],
 };
 
 function dockerBuild(dockerfile) {

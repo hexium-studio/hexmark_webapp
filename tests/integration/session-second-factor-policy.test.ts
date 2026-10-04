@@ -32,7 +32,7 @@ beforeAll(async () => {
 async function create(userId: string, secondFactorVerified: boolean) {
   const { createSession } = await import("../../apps/server/src/services/sessions/sessions");
   return createSession(
-    { userId, remember: false, userAgent: null, secondFactorVerified },
+    { userId, remember: false, userAgent: null, secondFactorVerified, method: "password" },
     new Date(),
   );
 }
