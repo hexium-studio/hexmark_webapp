@@ -22,8 +22,8 @@ web app exists, it is read through the HTTP API (see [Reading the log](#reading-
 | `outcome` | `success` or `failure`. |
 | `errorCode` | For failures: the code the client got (`version_conflict`, `forbidden`, `invalid_credentials`, …). |
 | `target` | What it was about: `kind` (`note`, `folder`, `trash`, `user`, `token`, `security_key`, `settings`, `audit`), `id`, and `label` - the path or name at the time. |
-| `reason` | The reason given with the action (notes, folders, the trash). |
-| `details` | Facts about the action, by kind: versions, the previous path or title, the section changed, sizes, counts, the trash batch, a token's permissions, old and new settings. For failures: `input` (what was sent, summarized) and `refusal` (what the refusal said besides its code). |
+| `reason` | The reason given with the action (notes, folders, the trash, locks, hiding). |
+| `details` | Facts about the action, by kind: versions, the previous path or title, the section changed, sizes, counts, the trash batch, a token's access (mode, base permissions, entries) and what a change of it changed, a lock's holder, the hidden mark lifted, old and new settings. For failures: `input` (what was sent, summarized) and `refusal` (what the refusal said besides its code). |
 
 **Never in the log:** passwords, API tokens (only their 8-character prefix, as the
 token page shows it), session tokens and sign-in challenges, TOTP secrets and
@@ -54,11 +54,13 @@ One event per action, unless noted. Every action can also appear with
 | Notes | `note.created`, `note.updated` (title and/or body; `details.change` is `edited` or `renamed`; `changed: false` when nothing differed), `note.section_replaced` (`sectionPath`), `note.moved` (`previousPath`), `note.deleted` (to the trash, `batchId`), `note.restored`; both also for each note of a folder batch, with `viaFolder` (see [Folder batches](#folder-batches)) |
 | Folders | `folder.created`, `folder.renamed`, `folder.moved` (all three with the `reason` the folder tools and endpoints take), `folder.deleted` (the folder with `folderCount`, `noteCount` and the `items` of the batch; each subfolder with `viaFolder`), `folder.restored` (the folder with `restoredSubfolders`, `restoredNotes` and the `items`; each subfolder with `viaFolder`) |
 | Deleted for good | `note.deleted_permanently`, `folder.deleted_permanently`: one event **per note and folder removed**, sharing a `runId`, each naming its trash `batchId` and `via` (`note`, `folder`, `empty_trash`); the folder removed with what was below it lists those `items`, and each of them names it as `viaFolder`. Emptying the trash adds `trash.emptied` with the counts. |
+| Locks | `note.locked`, `folder.locked` (the reason in `reason`; `details.changed: false` when it held a lock of its own already), `note.unlocked`, `folder.unlocked` (people only; `details` names the lock lifted: `lockedAt`, `lockedBy`, `lockReason`). Refused attempts too: an agent unlocking (`forbidden`), locking without a reason (`validation`) or inside a locked folder, and every write an agent tried on something locked (the write's own action with `error_code: locked` and `refusal.lockedItem`, `lockedBy`). |
+| Hidden | `note.hidden`, `folder.hidden` (the reason in `reason`; `details.changed: false` when it was hidden itself already), `note.unhidden`, `folder.unhidden` (people only, with the password re-entered in the last 10 minutes; `details` names the mark lifted: `hiddenAt`, `hiddenBy`, `hideReason`). Refused attempts too: an agent unhiding (`forbidden`, `refusal.reason: session_required`), a person unhiding without a recent password (`reauthentication_required`), an agent hiding without a reason (`validation` / `invalid_input`), and every write or read an agent tried on something hidden (the write's or read's own action with `error_code: hidden` and `refusal.hiddenItem`, `hiddenAt`, `hiddenBy`, `reason`, and for writes `locked`: the lock that refused it as well, or null). The content of a hidden note never appears in these events. |
 | Purge | `note.purged`, `folder.purged`: the trash purge as `System`, one event per item, sharing a `runId`; a folder batch is listed on its folder's event as for deleting for good. `audit.purged`: the audit purge, one event with the number of events removed. |
-| Agent reads | `read.overview`, `read.folder`, `read.search` (the query, shortened), `read.outline`, `read.section` (section, offset, limit), `read.note`, `read.changes`, `read.revisions`, `read.revision`, `read.trash` - for API tokens (MCP and HTTP API) only. **People's reads are never logged**, but their refused reads are. |
+| Agent reads | `read.overview`, `read.folder`, `read.search` (the query, shortened), `read.outline`, `read.section` (section, offset, limit), `read.note`, `read.changes`, `read.revisions`, `read.revision`, `read.trash`, `read.locked` (the list of locked items over HTTP) - for API tokens (MCP and HTTP API) only. `read.hidden` (the list of hidden items) is for people only: an agent's attempt is logged as a failure (`forbidden`). **People's reads are never logged**, but their refused reads are. |
 | Sign-in | `auth.sign_in` (with the method: `password`, `totp`, `webauthn`, `recovery_code`, `enrolment`), `auth.sign_in_failed` (`invalid_credentials` for an unknown e-mail or a wrong password, `rate_limited`), `auth.second_factor_verified` (success or failure, with the method; a recovery code with how many are left), `auth.sign_out`, `auth.reauthenticated` (the password re-entered; failures `invalid_password`, `rate_limited`). A session that ends by itself is not logged. |
 | Second factors | `two_factor.totp_added`, `two_factor.totp_removed`, `two_factor.security_key_added`, `two_factor.security_key_renamed` (old and new name), `two_factor.security_key_removed`, `two_factor.recovery_codes_regenerated`; `details.context` says where: `account`, `sign_in_enrolment` or `setup`. |
-| API tokens | `token.created` (prefix, permissions, folder scope, expiry), `token.revoked`, `auth.token_rejected` (a request with a revoked, expired or unknown token; at most once per token value in 10 minutes, see [Rejected tokens](#rejected-tokens)). |
+| API tokens | `token.created` (prefix, `mode`, `basePermissions`, `entries` with kind, id, path and permissions, expiry), `token.updated` (see [Changing a token](#changing-a-token)), `token.revoked`, `token.entry_removed` (by `System`: an entry whose target was deleted for good, see below), `auth.token_rejected` (a request with a revoked, expired or unknown token; at most once per token value in 10 minutes, see [Rejected tokens](#rejected-tokens)). |
 | Setup | `setup.admin_created`, `settings.changed` (old and new values). |
 | The log | `audit.read`: a refused attempt to read the log (an agent, invalid filters). Reading it is not logged. |
 
@@ -100,6 +102,33 @@ action: to count folder deletions, filter for events without it (or by the
 folder's id). Deleting for good and the purge always worked per item; their
 folder's event now lists the items too, and each item names the folder (the
 topmost one removed with it in that run) as `viaFolder`.
+
+## Changing a token
+
+`token.updated` records exactly what a change of a token's access did, in
+`details`:
+
+- `mode`, `basePermissions`, `expiresAt`: `{ before, after }`, each only
+  when it changed;
+- `addedEntries`, `removedEntries`: the entries as `{ kind, id, path,
+  permissions }` (permissions null on a deny list);
+- `changedEntries`: `{ kind, id, path, before, after }` with the
+  permissions of an entry that stayed;
+- `changed`: false when nothing differed (the event is written anyway).
+
+A new mode replaces every entry: all old ones are in `removedEntries`, all
+new ones in `addedEntries`. Lists longer than 50 are cut like any detail
+list. A refused change (no recent password, invalid access) is logged as a
+failure with the input summarized.
+
+When a note or folder is deleted for good (by a person or by the purge),
+the database removes the token entries pointing at it. Each removed entry is
+logged as `token.entry_removed` by `System` (source `system`), whoever
+deleted the item, in the same transaction: the token as target, and in
+`details` the `entryId`, the token's `mode`, the entry's `permissions`,
+the target (`targetKind`, `targetId`, `targetPath`), `cause:
+"target_deleted_permanently"`, `via` and the `runId` of the removal's own
+events. An entry whose target only goes to the trash stays.
 
 ## Rejected tokens
 

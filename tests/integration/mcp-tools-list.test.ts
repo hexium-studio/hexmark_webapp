@@ -89,7 +89,7 @@ describe("tools/list of the running server", () => {
 
   it("has the trash tools, the deleting ones announced as destructive, none deleting for good", () => {
     const tools = byName(served);
-    expect(served).toHaveLength(21);
+    expect(served).toHaveLength(25);
     for (const name of ["delete_note", "delete_folder"]) {
       expect(tools.get(name)?.annotations, name).toMatchObject({
         readOnlyHint: false,
@@ -105,6 +105,21 @@ describe("tools/list of the running server", () => {
     expect(tools.get("list_trash")?.annotations).toMatchObject({ readOnlyHint: true });
     const forGood = served.filter((tool) => /purge|permanent|empty|for_good/.test(tool.name));
     expect(forGood).toEqual([]);
+  });
+
+  it("has hide_note and hide_folder (hide) as plain writes with a required reason, no unhide", () => {
+    const tools = byName(served);
+    for (const name of ["hide_note", "hide_folder"]) {
+      expect(tools.get(name)?.annotations, name).toEqual({
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: false,
+      });
+      expect(tools.get(name)?.inputSchema.required, name).toContain("reason");
+    }
+    expect(MCP_TOOLS.hide_note.permission).toBe("hide");
+    expect(MCP_TOOLS.hide_folder.permission).toBe("hide");
+    expect(served.filter((tool) => /unhide|unlock/.test(tool.name))).toEqual([]);
   });
 
   it("has rename_folder (edit) and move_folder (move) as plain writes with a reason", () => {

@@ -42,6 +42,31 @@ export async function createFolder(
   return ((await response.json()) as { id: string }).id;
 }
 
+// The access mode's radio button ("allow_list" or "deny_list").
+export function modeRadio(page: Page, locale: UiLocale, mode: "allow_list" | "deny_list") {
+  return page.getByRole("radio", {
+    name: new RegExp(`^${text(locale, `tokens.form.access.${mode}.label`)}`),
+  });
+}
+
+// Opens a folder of the target tree by its name.
+export async function openFolder(page: Page, locale: UiLocale, name: string) {
+  await page
+    .getByRole("button", {
+      name: text(locale, "tokens.form.access.tree.open", { name }),
+      exact: true,
+    })
+    .click();
+}
+
+// The checkbox of a folder or note in the target tree.
+export function treeBox(page: Page, locale: UiLocale, kind: "folder" | "note", name: string) {
+  const label = text(locale, `tokens.form.access.tree.${kind}`);
+  return page
+    .locator("#token-tree")
+    .getByRole("checkbox", { name: `${label} ${name}`, exact: true });
+}
+
 export function nameField(page: Page, locale: UiLocale) {
   return page.getByLabel(text(locale, "tokens.form.name.label"), { exact: true });
 }
@@ -57,14 +82,21 @@ export function confirmDialog(page: Page, locale: UiLocale) {
 // Submits the form as filled in and, when asked, confirms the password.
 export async function submitToken(page: Page, locale: UiLocale, password?: string) {
   await createButton(page, locale).click();
-  if (password) {
-    const dialog = confirmDialog(page, locale);
-    await dialog
-      .getByLabel(text(locale, "tokens.confirm.passwordLabel"), { exact: true })
-      .fill(password);
-    await dialog.getByRole("button", { name: text(locale, "tokens.confirm.submit") }).click();
-    await expect(dialog).toHaveCount(0);
-  }
+  if (password) await confirmPassword(page, locale, password, "tokens.confirm.submit");
+}
+
+export async function confirmPassword(
+  page: Page,
+  locale: UiLocale,
+  password: string,
+  button: string,
+) {
+  const dialog = confirmDialog(page, locale);
+  await dialog
+    .getByLabel(text(locale, "tokens.confirm.passwordLabel"), { exact: true })
+    .fill(password);
+  await dialog.getByRole("button", { name: text(locale, button) }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 // The one-time configuration block, parsed.

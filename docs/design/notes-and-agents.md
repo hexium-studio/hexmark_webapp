@@ -29,6 +29,7 @@ follows in milestone 2 and uses the same HTTP API.
 | created_by / updated_by | actor (2.4) | |
 | deleted_at | timestamptz null | trash |
 | deleted_by / trash_batch_id | actor (2.4), uuid | who moved it to the trash, and with which batch (2.6) |
+| locked_at / locked_by / lock_reason | timestamptz / actor / text, null | the folder's own lock, covering everything below it (2.8; migration `0010`) |
 
 Unique `(parent_id, lower(name))` among non-deleted folders (root handled with a partial index).
 Folder depth is not limited; cycles are rejected when moving.
@@ -48,8 +49,8 @@ Folder depth is not limited; cycles are rejected when moving.
 | created_by / updated_by | actor (2.4) | |
 | deleted_at | timestamptz null | trash, purged after the retention (2.6) |
 | deleted_by / trash_batch_id | actor (2.4), uuid | who moved it to the trash, and with which batch (2.6) |
-| locked_at / locked_by | timestamptz / actor, null | column now, rules in a later milestone |
-| hidden | boolean default false | column now, rules in a later milestone |
+| locked_at / locked_by / lock_reason | timestamptz / actor / text, null | the note's own lock (2.8) |
+| hidden_at, hidden_by_*, hide_reason | timestamptz, actor, text, null | hidden from agents (2.9); `hidden` is derived from `hidden_at` since migration 0011 |
 
 Unique `(folder_id, lower(title))` among non-deleted notes – keeps export paths unambiguous.
 GIN index on `search`; index on `updated_at` for "changed since".
@@ -111,8 +112,9 @@ An agent's change is always also attributed to the token's owner via the token r
 | name | text | 1–64 chars, unique per user, shown as actor name |
 | token_hash | text | SHA-256 hex; the token itself is shown once |
 | token_prefix | text | first 8 chars for recognition, e.g. `hmk_3f9a…` |
-| permissions | text[] | subset of: `read`, `search`, `create`, `edit`, `move`, `delete`, `lock` |
-| folder_scope | uuid[] null | null = whole wiki; otherwise these folders and their subfolders |
+| access_mode | text | `allow_list` or `deny_list` (2.5a); chosen at creation, no default |
+| base_permissions | text[] null | deny_list: the permissions for everything not excluded; null for allow_list |
+| permissions / folder_scope | text[] / uuid[], null | legacy (milestone 1); migration `0010` converted them into the mode and entries; neither read nor written since, kept for one release so the previous server version still runs on a migrated database; a later migration drops them |
 | expires_at | timestamptz null | optional |
 | last_used_at | timestamptz null | |
 | created_at / revoked_at | timestamptz | |
@@ -130,8 +132,42 @@ After creation the UI shows the token **once**, together with one copyable block
 The MCP URL comes from the optional env `MCP_PUBLIC_URL`; without it the web derives it from the
 request host and `SERVER_PORT`. Above the block a short translated hint (not part of the copied text)
 explains its use, e.g. "Give your agent the following configuration so it can set up the MCP server".
-Permissions and folder scope are not in the block – the agent learns
+Permissions and access are not in the block – the agent learns
 them from `get_overview` after connecting.
+
+### 2.5a Token access: allow lists and deny lists (decided 2026-10-04)
+
+`api_token_entries` (migration `0010`): `token_id` (cascade), `target_kind` (`folder` | `note`),
+`folder_id` / `note_id` (exactly one, cascade on deletion for good), `permissions` (allow_list only;
+a note entry only `read`, `edit`, `move`, `delete`, `lock`), unique per token and target. Each
+entry copies its token's mode (`token_access_mode`, foreign key `(token_id, access_mode)`), so the
+database can tie the permissions rule to the mode; a token's mode can therefore only change after
+its entries are removed - changing the mode replaces all entries in one transaction.
+
+- **allow_list**: only the listed folders (each with its whole subtree, also later additions) and
+  notes. An item's permissions are the union of the entries on it and on the folders above it.
+  Nothing at the root level: creating there is refused (`outside_scope`).
+- **deny_list**: everything except the listed targets (an excluded folder with its subtree), with
+  `base_permissions`. New content is included unless created below an excluded folder.
+- Always intersected with the owner's role. An item with no permission is invisible: not found,
+  never listed or searched, never a candidate of an ambiguous title, not in the trash listing or
+  the changes; a revision's folder out of reach is shown as outside. Paths of reachable items still
+  contain the names of the folders above them (needed for path addressing). A note listed with
+  `read` counts as searchable (a note entry carries no `search` of its own).
+- **One evaluation** (`apps/server/src/services/access/policy.ts`, applied to the folder tree of
+  the operation by `access-view.ts`, also as SQL conditions for listings and search): every
+  service asks it, inside its transaction, after locking the token row (entries change only with
+  that row locked for update), so a change applies to the token's next request. A write of an
+  agent decides again on the folder rows above the item, read with a share lock: a folder moved or
+  locked meanwhile is what counts, not the folder tree the operation read at its start.
+- A target in the trash keeps its entry (it applies again on restore). Deleting a target for good
+  removes its entries by cascade; the deleting transaction reads them in the same statement and
+  logs each as `token.entry_removed` by System.
+- Changing mode, entries, base permissions or expiry (`PATCH /api/tokens/v1/tokens/:id`) needs the
+  password re-entered recently and is logged with a before/after diff (`token.updated`).
+- Migration of milestone-1 tokens: no folder scope → deny_list without entries and the old
+  permissions as base set; a scope → allow_list with one folder entry per scoped folder carrying
+  the old permissions.
 
 ### 2.6 Trash (decided 2026-10-03)
 
@@ -169,6 +205,67 @@ Deleting never removes rows at once: notes and folders move to the trash (`delet
   deletes due notes (revisions and sections cascade) and then folders, children first, and logs
   the counts.
 
+### 2.8 Locks (decided 2026-10-04)
+
+Notes and folders can be locked (`locked_at`, the `locked_by` actor, `lock_reason`; migration
+`0010`). A folder's lock covers everything below it, also what is created there later: an item's
+effective lock is its own, else the nearest locked folder above it (derived, nothing is copied).
+
+- Agents with `lock` may lock (MCP `lock_note`, `lock_folder`; HTTP `POST .../lock`), always with a
+  reason; never inside something locked. Only people unlock (`POST .../unlock`, sessions only). No
+  password re-entry for unlocking: it gives nobody more access (people may change locked items
+  anyway), it is logged, and locking again undoes it.
+- Agents cannot change, move, rename, delete, restore or create inside a locked item: `423 locked`
+  with `lockedItem { kind, id, path }`, `lockedAt`, `lockedBy`, `reason`. Decided in the write's
+  transaction on the rows it locks: the note's own row (for update) and the folders above it (for
+  share), so a lock set at the same moment either comes first and refuses the write, or waits for
+  it. Deleting or restoring a folder batch is refused when an item in it is locked (checked on the
+  rows the operation locked or wrote; the refusal rolls everything back). People are not refused.
+- Reads show `locked: { at, by, reason, inherited, from }` on notes and in the tree.
+  `GET /api/notes/v1/locked` lists the items with a lock of their own (web page `/locked`).
+- Locking is no content change: no version, no revision; `note.locked`, `folder.locked`,
+  `note.unlocked`, `folder.unlocked` in the audit log, failures too.
+
+### 2.9 Hidden (decided 2026-10-04)
+
+Notes and folders can be hidden from agents (`hidden_at`, the `hidden_by` actor, `hide_reason`;
+migration `0011`, which also turns the old `notes.hidden` flag into a column derived from
+`hidden_at` - new code reads `hidden_at` only). A hidden folder hides everything below it, also
+what is created there later (derived from the folder tree, nothing is copied).
+
+- **One evaluation.** The hidden folders are part of the access evaluation every read, search,
+  listing and write uses (`services/access/policy.ts`): for an agent (any token), everything below
+  a hidden folder has no permission, whatever its mode and entries say, and so does not exist for
+  it - not found, never listed, counted or searched, also in the trash and the changes, never
+  named in ambiguous candidates, `title_taken`, `folder_cycle` or a token's own allow-list entries.
+  The hidden folder itself and a hidden note stay visible (name, title, path, id, hidden state).
+  People are not affected.
+- **Content.** An agent cannot read a hidden note's content: `read_note`, `read_outline`,
+  `read_section`, `read_revision` answer `403 hidden` with `hiddenItem { kind, id, path }`,
+  `title`, `hiddenAt`, `hiddenBy`, `reason`. Search matches its title only (a hit without
+  section, heading or snippet); revisions and changes leave out the section an edit changed.
+  Listing or searching a hidden folder answers `hidden`.
+- **Writes.** Agents cannot change, move, rename, delete, restore, lock or create inside hidden
+  items, nor delete or restore a folder batch holding a hidden item: `403 hidden`, decided in the
+  write's transaction on the rows it locks, like locks (2.8): the note's row for update, the
+  folders above it for share - a folder above hidden meanwhile makes the item disappear (not
+  found), the item itself hidden meanwhile answers hidden. Checked before the version, so a refusal
+  says nothing about the content. Moving or renaming a folder that merely holds hidden items is
+  allowed, as for locks.
+- **Hidden and locked** are checked separately. Both together answer `hidden` (precedence: the
+  stronger mark; the agent cannot even read the item) with the lock refusal's details in
+  `locked` (null without a lock), so the agent knows that unhiding alone would not be enough.
+- Agents with `hide` may hide (`hide_note`, `hide_folder`; `POST .../hide`), always with a
+  reason, also locked items. Only people unhide (`POST .../unhide`, sessions only), **with the
+  password re-entered in the last 10 minutes**: unhiding lets every agent read the item again -
+  it gives more access, unlike unlocking. Unhiding removes only the hidden mark; a lock stays.
+- Reads show `hidden: { at, by, reason, inherited, from }` like `locked`; a hidden folder in an
+  agent's tree has no counts (null) and is never loaded. `GET /api/notes/v1/hidden` (people only)
+  lists the items hidden themselves; the web page `/locked` shows them next to the locked ones,
+  with Unhide.
+- Hiding is no content change: `note.hidden`, `folder.hidden`, `note.unhidden`,
+  `folder.unhidden` in the audit log, failures too.
+
 ### 2.7 Audit log (decided 2026-10-04)
 
 Everything a person or an agent does is recorded in the append-only table `audit_events`
@@ -197,11 +294,12 @@ others their own and their tokens'). Details: [docs/audit.md](../audit.md).
 | edit | change title and body, rename folders |
 | move | move notes and folders |
 | delete | move to trash, list the trash, restore (never delete for good) |
-| lock | set *locked* (later milestone; humans lift) |
+| lock | lock notes and folders (2.8; only humans unlock) |
+| hide | hide notes and folders from agents (2.9; only humans unhide) |
 
 Humans in this milestone: admin and user have all note permissions, guest has `read` + `search`.
-Fine-grained human permissions follow later. Token checks: permission in the token **and** in the
-owner's role **and** the note inside `folder_scope`.
+Fine-grained human permissions follow later. Token checks: the permission on the item from the
+token's access mode and entries (2.5a) **and** in the owner's role.
 
 ## 4. HTTP API (`/api/notes/v1`, `/api/tokens/v1`)
 
@@ -223,7 +321,10 @@ Session (humans, via the web) or bearer token (agents) – same services, same c
 - Trash: `GET trash?folder&limit` (entries with `parentId`/`parentPath`: where the item was);
   for good, sessions with the password re-entered recently only: `DELETE trash/notes/:id`,
   `DELETE trash/folders/:id`, `DELETE trash` (empty, admins only)
-- Tokens (session only): `GET tokens`, `POST tokens` (returns the token once), `DELETE tokens/:id`
+- Locks: `POST notes/:id/lock`, `POST folders/:id/lock` (`reason`, required for tokens),
+  `POST notes/:id/unlock`, `POST folders/:id/unlock` (sessions only), `GET locked` (2.8)
+- Tokens (session only): `GET tokens`, `POST tokens` (returns the token once; `mode` required),
+  `PATCH tokens/:id` (mode, entries, base permissions, expiry; password re-entered), `DELETE tokens/:id`
 
 Errors as codes, as everywhere: `not_found`, `forbidden`, `version_conflict`, `title_taken`,
 `validation`, `rate_limited`, … An OpenAPI document is generated from the Zod schemas.
@@ -274,9 +375,12 @@ Wherever a tool takes `note`, it accepts the **id**, the **title** or the **fold
 | `list_trash` | delete | `folder_id?`, `limit?` | entries (original path, parentId/parentPath, deletedBy, purgeAt, counts) |
 | `restore_note` | delete | `note_id`, `folder_id?`, `title?`, `reason?` | new version, path |
 | `restore_folder` | delete | `folder_id`, `reason?` | path, batchId, restoredSubfolders (not counting the folder itself), restoredNotes |
+| `lock_note` | lock | `note`, `reason` | kind, id, path, locked, changed |
+| `lock_folder` | lock | `folder_id`, `reason` | kind, id, path, locked, changed |
+| `hide_note` | hide | `note`, `reason` | kind, id, path, hidden, changed |
+| `hide_folder` | hide | `folder_id`, `reason` | kind, id, path, hidden, changed |
 
-Lock tools come with locked/hidden in a later milestone; until then the token page does not
-offer the `lock` permission. No tool deletes for good (2.6). Tool errors use the same codes
+Lock tools: `lock_note`, `lock_folder` (2.8); hide tools: `hide_note`, `hide_folder` (2.9). No tool deletes for good (2.6). Tool errors use the same codes
 as the HTTP API, with a short English explanation for the agent; invalid arguments (the HTTP
 API's `validation`) are `invalid_input` with a code and an English rule per field.
 
@@ -296,4 +400,4 @@ API's `validation`) are `invalid_input` with a code and an English rule per fiel
 
 Browser UI for notes (milestone 2; for tokens only a minimal account view now), links/backlinks, trash UI (the trash
 itself and its purge are in scope, 2.6), the audit log UI (the log itself is in scope,
-2.7), locked/hidden rules, attachments, import/export, real-time co-editing.
+2.7), attachments, import/export, real-time co-editing.

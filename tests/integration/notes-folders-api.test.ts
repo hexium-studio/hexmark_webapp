@@ -78,7 +78,16 @@ describe("tree", () => {
     });
     // Where the depth ends: not loaded, so no lists, only what it holds.
     expect(one.body.folders).toEqual([
-      { id: sub, name: "Sub", path: "Tree/Sub", folderCount: 1, noteCount: 1, loaded: false },
+      {
+        id: sub,
+        name: "Sub",
+        path: "Tree/Sub",
+        folderCount: 1,
+        noteCount: 1,
+        locked: null,
+        hidden: null,
+        loaded: false,
+      },
     ]);
     const two = await send("GET", `/tree?folder=${top}&depth=2`);
     const [subEntry] = two.body.folders as Record<string, unknown>[];

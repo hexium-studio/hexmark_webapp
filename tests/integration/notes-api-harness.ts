@@ -70,13 +70,30 @@ export async function signedIn(
   return { auth, id: user.id };
 }
 
+// The token input of the API from the shape tests used before access modes
+// existed ({ permissions, folderScope }): no folder scope is a deny_list
+// without entries and the permissions as base set, a folder scope an
+// allow_list with one entry per folder - what migration 0010 does with
+// existing tokens. Input that names a mode is sent as it is.
+export function tokenInput(input: Record<string, unknown>): Record<string, unknown> {
+  if ("mode" in input) return input;
+  const { permissions, folderScope, ...rest } = input as {
+    permissions?: string[];
+    folderScope?: string[] | null;
+  };
+  if (!folderScope) return { ...rest, mode: "deny_list", basePermissions: permissions };
+  const entries = folderScope.map((id) => ({ kind: "folder", id, permissions }));
+  return { ...rest, mode: "allow_list", entries };
+}
+
 // Creates an API token through the API; returns its bearer auth and id.
 export async function apiToken(
   world: NotesWorld,
   owner: Auth,
   input: Record<string, unknown>,
 ): Promise<{ auth: Auth; id: string; token: string }> {
-  const response = await call(world.server, owner, "POST", "/api/tokens/v1/tokens", input);
+  const body = tokenInput(input);
+  const response = await call(world.server, owner, "POST", "/api/tokens/v1/tokens", body);
   if (response.status !== 201) throw new Error(`token not created: ${JSON.stringify(response)}`);
   const token = response.body.token as string;
   const info = response.body.info as { id: string };

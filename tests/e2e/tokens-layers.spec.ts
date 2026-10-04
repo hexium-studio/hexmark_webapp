@@ -49,6 +49,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await check("list and form");
 
         await type("#token-name", "layers");
+        await clickAt(page, "input[name=mode][value=deny_list]");
         await clickAt(page, "main button[type=submit]");
         await until(page, "!!document.querySelector('dialog[open] #reauth-password')");
         const open = await probe.measure();

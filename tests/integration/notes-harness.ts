@@ -28,9 +28,10 @@ export function trashedBy(userId: string, batchId: string = randomUUID(), name =
   };
 }
 
-// A token row as the token service stores it: digest and the first eight
-// characters of "hmk_" + base64url.
-export function tokenRow(userId: string, values: Record<string, unknown> = {}) {
+// A token row as the token service stores it before migration 0010: digest
+// and the first eight characters of "hmk_" + base64url, permissions and
+// (null) folder scope.
+export function legacyTokenRow(userId: string, values: Record<string, unknown> = {}) {
   const token = `hmk_${randomBytes(32).toString("base64url")}`;
   return {
     user_id: userId,
@@ -40,6 +41,17 @@ export function tokenRow(userId: string, values: Record<string, unknown> = {}) {
     permissions: ["read", "search"],
     ...values,
   };
+}
+
+// A token row for the schema since migration 0010: the whole wiki (deny_list
+// without entries) with read and search. The legacy columns stay filled as
+// a server of the previous version writes them.
+export function tokenRow(userId: string, values: Record<string, unknown> = {}) {
+  return legacyTokenRow(userId, {
+    access_mode: "deny_list",
+    base_permissions: ["read", "search"],
+    ...values,
+  });
 }
 
 export async function insertRow(
@@ -52,12 +64,19 @@ export async function insertRow(
   return inserted;
 }
 
+// Inserts a token in the shape of the database's schema (before or since
+// migration 0010), so tests seeding an older schema can use it too.
 export async function insertToken(
   db: TestDatabase,
   userId: string,
   values: Record<string, unknown> = {},
 ): Promise<string> {
-  return (await insertRow(db, "api_tokens", tokenRow(userId, values))).id as string;
+  const [current] = await db.sql`
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'api_tokens' and column_name = 'access_mode'
+  `;
+  const row = current ? tokenRow(userId, values) : legacyTokenRow(userId, values);
+  return (await insertRow(db, "api_tokens", row)).id as string;
 }
 
 export async function insertFolder(

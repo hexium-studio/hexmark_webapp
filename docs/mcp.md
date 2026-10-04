@@ -9,7 +9,8 @@ for people setting up an agent and for agents using it:
    server tells an agent on its own.
 2. [Setup](#setup): create a token, connect a client.
 3. [Concepts](#concepts): notes, folders, ids, addressing, sections,
-   versions, history, the trash, permissions.
+   versions, history, permissions, access modes, locks, hidden items, the
+   trash.
 4. [Recommended workflows](#recommended-workflows) for agents.
 5. [Tool reference](#tool-reference): every tool with parameters, result,
    errors and an example (generated from the tool definitions).
@@ -23,11 +24,13 @@ for people setting up an agent and for agents using it:
 | Endpoint | `POST /mcp` on the API server (port `SERVER_PORT`, default 3001), e.g. `http://localhost:3001/mcp`; in production the address in `MCP_PUBLIC_URL` |
 | Transport | Streamable HTTP, **stateless**: every request is answered on its own, there are no sessions and no server-initiated stream (`GET` and `DELETE /mcp` answer 405). Answers are plain JSON. |
 | Authentication | An API token in every request: `Authorization: Bearer hmk_…` |
-| Capabilities | 21 tools, 1 resource (`hexmark://guide`), server instructions |
+| Capabilities | 25 tools, 1 resource (`hexmark://guide`), server instructions |
 
 When an agent connects, the server sends **instructions** with `initialize`:
-what Hexmark is, which name and permissions the token has and on which
-folders, how to start, and the rules for writing. The **resource**
+what Hexmark is, which name the token has and what it can reach (its
+[access mode](#access-modes) and permissions), how to start, the rules for
+writing, and what [locks](#locks) and [hidden items](#hidden-notes-and-folders)
+mean. The **resource**
 `hexmark://guide` (Markdown) explains notes, folders, addressing, sections,
 writing, history and errors in more detail, again with the token's own
 permissions. Agents that do not read resources find the same rules in the
@@ -42,8 +45,12 @@ tool call, on the locked token row.
 ### 1. Create an API token
 
 On the token page of your account (`/account/tokens`), create a token with a
-name (e.g. `claude-code-laptop`), its [permissions](#permissions) and,
-optionally, the folders it is limited to and an expiry date. The name is shown
+name (e.g. `claude-code-laptop`), its [access mode](#access-modes) - only
+the folders and notes you pick, or everything except them - with its
+[permissions](#permissions), and optionally an expiry date. The mode has no
+default: you choose it every time. Mode, targets, permissions and expiry can
+be changed later on the same page (with your password); the change applies
+to the agent's next request. The name is shown
 in the history next to every change the agent makes. A token grants access to
 the wiki, so creating one asks for your password unless you entered it in the
 last 10 minutes (the server enforces this; revoking a token never asks).
@@ -291,24 +298,163 @@ A token has a set of permissions, chosen when it is created:
 | `edit` | `update_note`, `replace_section`, `rename_folder` |
 | `move` | `move_note`, `move_folder` |
 | `delete` | `delete_note`, `delete_folder`, `list_trash`, `restore_note`, `restore_folder`: into the trash and back, never for good |
-| `lock` | reserved: locking comes in a later version |
+| `lock` | `lock_note`, `lock_folder` (only people unlock; see [Locks](#locks)) |
+| `hide` | `hide_note`, `hide_folder` (only people unhide; see [Hidden notes and folders](#hidden-notes-and-folders)) |
 
-The token page does not offer `lock` yet, as no MCP tool uses it; the
-server still accepts it (e.g. tokens created over the HTTP API).
+Permissions apply per note and folder, as the token's [access
+mode](#access-modes) gives them: a write needs its permission on the item
+(and, for creating or moving, on the target folder). A token never exceeds
+its owner: a guest's token can read and search only, whatever was chosen. A
+tool whose permission the token holds nowhere fails with `forbidden` and
+`permission` naming what is missing; so does a tool used on an item the
+token can see but lacks the permission for.
 
-A token never exceeds its owner: a guest's token can read and search only,
-whatever was chosen. A tool called without its permission fails with
-`forbidden` and `permission` naming what is missing.
+### Access modes
 
-### Folder scope
+Every token has one of two access modes, chosen by its owner when it is
+created (there is no default) and changeable later:
 
-A token can be limited to folders. It then sees those folders and all their
-subfolders, and nothing else: no notes at the root level, no other folders.
-Listings and search leave the rest out (`list_folder` without `folder_id`
-lists the token's top folders), and addressing a note outside the scope
-gives `not_found`. Writing into a folder outside the scope (or at the
-root level) fails with `forbidden` and `reason: "outside_scope"`, so the
-agent learns why. `get_overview` names the folders (`access.folderScope`).
+- **`allow_list`** - only what is listed. The token reaches the listed
+  folders, each with everything below it (also what is created there
+  later), and the listed single notes; each entry has its own
+  permissions, and a note covered by several entries (a folder and a
+  folder inside it, or a folder and the note itself) has all of them. The
+  root level is not reachable: nothing can be created there. A single
+  note can carry `read`, `edit`, `move`, `delete`, `lock` and `hide`; when
+  it may be read, `search_notes` finds it.
+- **`deny_list`** - everything except what is listed, with one set of
+  permissions. New content is reachable automatically, unless it is
+  created inside an excluded folder. An empty list is the whole wiki.
+
+From the agent's view:
+
+- `get_overview` says the mode (`access.mode`), every permission the
+  token holds somewhere (`access.permissions`) and, for an allow list, the
+  listed targets with their paths and permissions (`access.entries`). A
+  deny list's exclusions are not named.
+- What the token cannot reach does not exist for it: listings and search
+  leave it out, addressing it gives `not_found` / `folder_not_found`, a
+  title shared with such a note is no `ambiguous_note`, the trash and
+  `list_changes` leave it out, and a revision that lay in a folder out of
+  reach shows `folderOutsideScope: true` without the folder. The paths of
+  what it can reach still show the names of the folders above it, but no
+  answer gives the id of a folder out of reach: `folderId` of a note
+  (`read_note`, `read_outline`, `read_section`, `search_notes`) is null for
+  a note listed on its own whose folder is not listed, as `lockedItem.id`
+  and `locked.from.id` are; so are `existingFolderId` (`name_taken`) and
+  `existingNoteId` (`title_taken`) when the folder or note holding the name
+  is out of reach (e.g. excluded on a deny list).
+- `list_folder` without `folder_id` lists, for an allow list, the
+  topmost listed folders and the listed single notes (each with its
+  `folderPath`).
+- Writing into a folder out of reach - or, for an allow list, at the root
+  level - fails with `forbidden` and `reason: "outside_scope"`: creating,
+  moving (`folder_id` / `parent_id` null) and restoring a note there. For
+  creating this holds even when the token holds `create` nowhere; a folder
+  it can reach without the permission answers `forbidden` with
+  `permission`.
+- `delete_folder` and `restore_folder` take everything inside along. A
+  folder that holds notes or folders out of the token's reach (not listed,
+  or excluded) is refused with `forbidden` and `reason: "hidden_content"`,
+  without naming them. One that holds a hidden note or folder the token can
+  see is refused with [`hidden`](#hidden-notes-and-folders) naming it; when
+  both apply, the answer is `hidden`.
+- A change of the token's access applies to its next request; reconnecting
+  is not needed (the server instructions of a running session still show
+  the old access until the agent reconnects; `get_overview` is current).
+
+### Locks
+
+People and agents with the `lock` permission can **lock** a note or a
+folder (`lock_note`, `lock_folder`, always with a reason for agents). A
+folder's lock covers everything below it, also notes and folders created
+there later.
+
+- Agents cannot change what is locked: `update_note`, `replace_section`,
+  `move_note`, `rename_folder`, `move_folder`, `delete_note`,
+  `delete_folder`, `restore_note`, `restore_folder`, and creating or moving
+  anything into a locked folder, fail with [`locked`](#errors) naming the
+  note or folder holding the lock (`lockedItem`: `kind`, `id`, `path`; `id`
+  is null for a folder the token cannot see), `lockedAt`, `lockedBy` and
+  `reason`. Nothing is written. A folder that holds a locked note cannot be
+  deleted by an agent either.
+- Locking what holds a lock of its own already answers `changed: false`
+  with a `message`, the lock unchanged. Locking a note or folder inside a
+  locked folder answers `locked` with `alreadyLocked: true` and that folder
+  as `lockedItem`: it is locked already, nothing needs to be done.
+- Reading is not affected. Reads show the state: `locked` on notes
+  (`read_note`, `read_outline`, `read_section`, `list_changes`) and on
+  folders and notes in `list_folder` and `get_overview` - null, or `at`,
+  `by`, `reason`,
+  `inherited` (true when a folder above holds it) and `from` (the item
+  holding it).
+- **Only people unlock** (signed in, on the web app's `/locked` page or
+  over the HTTP API); there is no unlock tool. People may also change
+  locked items. Locking is no change of content: no new version; the audit
+  log records it with the reason.
+
+### Hidden notes and folders
+
+People and agents with the `hide` permission can **hide** a note or a folder
+from agents (`hide_note`, `hide_folder`, always with a reason for agents).
+Only people unhide it. Hiding cuts what agents see, whatever a token's
+access mode and entries; people see and change hidden items as before.
+
+What an agent sees of a **hidden note**:
+
+- Its id, title, path and `hidden` state (`at`, `by`, `reason`,
+  `inherited`, `from`) - in `list_folder`, `get_overview`, `list_changes`,
+  `list_revisions` and as the target of other tools.
+- Not its content: `read_note`, `read_outline`, `read_section` and
+  `read_revision` fail with [`hidden`](#errors) (`hiddenItem`, `title`,
+  `hiddenAt`, `hiddenBy`, `reason`). `search_notes` finds it by its title
+  only: a hit with `sectionPath` and `heading` null, an empty snippet and
+  `hidden` set; never by its headings or text. `list_revisions` and
+  `list_changes` show its versions without the section an edit changed
+  (`sectionPath` null): headings are content too.
+
+What an agent sees of a **hidden folder**:
+
+- The folder itself: name, id, path and `hidden` state. In listings it is
+  never loaded and has no counts (`folderCount`, `noteCount` null).
+- Nothing below it, also what is created there later: its notes and
+  subfolders are not listed, counted or found, not in `list_changes` or
+  `list_trash`, and naming any of them by id or path answers `not_found` /
+  `folder_not_found`, as if they did not exist (so does creating or moving
+  something into a folder below it). No answer names anything below it: not
+  `ambiguous_note` candidates, not `title_taken`, not `folder_cycle`, not a
+  token's own allow-list entries in `get_overview`.
+- `list_folder` and `search_notes` with the hidden folder itself fail with
+  `hidden`.
+
+Agents cannot **change** hidden items, without a lock being set:
+`update_note`, `replace_section`, `move_note`, `rename_folder`,
+`move_folder`, `delete_note`, `delete_folder`, `restore_note`,
+`restore_folder`, `lock_note`, `lock_folder`, and creating or moving
+anything into a hidden folder fail with `hidden` naming the hidden item. So
+do `delete_folder` and `restore_folder` for a folder that holds a hidden
+note or folder the agent can see (it would go along); items inside that lie
+out of the token's reach answer `forbidden` with `reason: "hidden_content"`
+instead, and when both lie inside, `hidden` comes first (see [Access
+modes](#access-modes)). The check comes before the version check: a refused
+write tells nothing about the content. Hiding what is hidden itself already
+answers `changed: false` with a `message`.
+
+**Hidden and locked.** Both are checked on their own. When both apply, the
+answer is `hidden` (it takes precedence: the agent cannot even read the
+item), and its `locked` field carries what the `locked` error would have
+said (`lockedItem`, `lockedAt`, `lockedBy`, `reason`) - so the agent knows
+that a person unhiding it would not be enough. Without a lock, `locked` is
+null. Hiding a locked item is allowed (it only takes more away from
+agents), and unhiding never lifts a lock: a real lock stays. Renaming or
+moving a folder that merely holds hidden items is allowed, as for locks: the
+items keep their marks.
+
+**Only people unhide**, signed in, on the web app's `/locked` page or over
+the HTTP API, with their password re-entered in the last 10 minutes:
+unhiding lets every agent read the item again. There is no unhide tool.
+Hiding is no change of content: no new version; the audit log records hiding
+and unhiding with the reason, and every refused attempt.
 
 ### The trash
 
@@ -328,8 +474,8 @@ move it to the **trash**.
   `deletedAt`, `purgeAt` and `batchId`; when it went with a folder above
   it, that folder as `batchRootId` and `batchRootPath` - the id
   `restore_folder` takes to bring the batch back.
-  Both answers come only for items inside the token's folders; outside
-  them the answer stays `not_found` / `folder_not_found`.
+  Both answers come only for items the token can reach; otherwise the
+  answer stays `not_found` / `folder_not_found`.
 - A folder goes to the trash with all its subfolders and notes as **one
   batch** (they share a `batchId`). `restore_folder` brings back exactly
   that batch; items deleted on their own before stay in the trash.
@@ -346,8 +492,8 @@ move it to the **trash**.
   where each item was (`parentId`, `parentPath`: a note's folder, a
   folder's parent; `id` is always the item itself), who deleted what,
   `purgeAt` and, for a folder deleted with its
-  contents, how many subfolders and notes went with it. A token limited to
-  folders sees only items that lay inside them.
+  contents, how many subfolders and notes went with it. A token sees only
+  items it holds `delete` on, judged by where they lay.
 - `restore_note` puts a note back where it was, or into `folder_id`, and
   under `title` when given. If its folder is in the trash as well it fails
   with `parent_in_trash` (naming that folder): restore the folder, or pass
@@ -381,7 +527,8 @@ setup and removes `SETUP_TOKEN`; see [deployment](deployment.md).
 ## Recommended workflows
 
 **Orient.** Call `get_overview` first: it tells the agent its name in the
-history, its permissions, its folders and the top of the tree. Go deeper with
+history, its access mode and permissions (and the listed targets of an
+allow list) and the top of the tree with locks. Go deeper with
 `list_folder` (`folder_id`, `depth`). A folder where the listing's depth ends
 has `loaded: false` with `folderCount` and `noteCount` instead of its
 contents: not empty, just not listed.
@@ -419,6 +566,17 @@ returned id: `restore_note` / `restore_folder` take it. `list_trash` shows
 what is there and until when. Nothing an agent deletes is gone before the
 retention ends.
 
+**Respect locks.** Before changing a note, a `locked` value in what you
+read means you cannot change it; ask a person instead. Lock what must stay
+as it is (`lock_note`, `lock_folder`) with a reason a person will
+understand; only people can lift it.
+
+**Respect hidden items.** A `hidden` value means you cannot read the note's
+content or look into the folder, nor change it; do not try to find its
+content another way (search finds its title only). Hide what agents must
+not read (`hide_note`, `hide_folder`) with a reason; only people can unhide
+it.
+
 **Audit history.** `list_changes` with `since` (e.g. the time of your last
 visit) lists what changed; `list_revisions` shows a note's versions with
 author and reason; `read_revision` shows one version in full, e.g. to compare
@@ -432,7 +590,7 @@ it with the current text or to bring old text back with `update_note`.
 
 | Tool | Permission | Kind | Purpose |
 | --- | --- | --- | --- |
-| [`get_overview`](#get_overview) | `read` | read-only | Start here. Returns who this token acts as (the name shown in the history), its permissions and the folders it is limited to, the top two levels of the folder tree with note ids, titles and versions, and how many notes and folders it can see. |
+| [`get_overview`](#get_overview) | `read` | read-only | Start here. Returns who this token acts as (the name shown in the history), its access mode and permissions (for an allow list: the folders and notes it may reach), the top two levels of the folder tree with note ids, titles, versions, locks and hidden marks, and how many notes and folders it can see. |
 | [`list_folder`](#list_folder) | `read` | read-only | List a folder's subfolders and notes (id, title, version, last change), or the root level when folder_id is left out. |
 | [`search_notes`](#search_notes) | `search` | read-only | Full-text search over all notes this token can see, ranked per section. |
 | [`read_outline`](#read_outline) | `read` | read-only | Get a note's table of contents without its text: every section's path, heading level, size in characters and estimated tokens (both including its subsections), and overBudget for sections above the reading budget: read their subsections one by one, or the section in chunks with read_section offset/limit. |
@@ -453,6 +611,10 @@ it with the current text or to bring old text back with `update_note`.
 | [`list_trash`](#list_trash) | `delete` | read-only | List what is in the trash, newest first: notes and folders deleted on their own, and for a folder deleted with its contents the folder alone, with how many subfolders and notes went with it. |
 | [`restore_note`](#restore_note) | `delete` | writes | Bring a note back from the trash, by its id: into the folder it was deleted from, or into folder_id when given, under its old title or title when given. |
 | [`restore_folder`](#restore_folder) | `delete` | writes | Bring a folder back from the trash, by its id, together with everything that was deleted with it (its batch); items deleted on their own before stay in the trash. |
+| [`lock_note`](#lock_note) | `lock` | writes | Lock a note so that no agent changes it any more. |
+| [`lock_folder`](#lock_folder) | `lock` | writes | Lock a folder with everything below it, also notes and folders created there later, so that no agent changes any of it. |
+| [`hide_note`](#hide_note) | `hide` | writes | Hide a note's content from agents: its title, path and id stay visible, but its body, outline, sections and the bodies of its revisions can no longer be read by any agent (error hidden), and search finds it by its title only. |
+| [`hide_folder`](#hide_folder) | `hide` | writes | Hide a folder from agents with everything below it, also notes and folders created there later: the folder itself stays visible (name, hidden state), but nothing below it exists for any agent any more - not in listings, search, changes or the trash, and addressing it answers not found. |
 
 Results are JSON objects, sent as the text content of the tool result. Failures set `isError` and send `{ error, message, ...details }` (see [Errors](#errors)). Every tool can also fail with the common errors `invalid_input`, `forbidden`, `token_revoked`, `token_expired`, `setup_token_present`, `database_unavailable`, `server_not_configured`.
 
@@ -460,7 +622,7 @@ Results are JSON objects, sent as the text content of the tool result. Failures 
 
 **Overview** · permission `read` · read-only
 
-Start here. Returns who this token acts as (the name shown in the history), its permissions and the folders it is limited to, the top two levels of the folder tree with note ids, titles and versions, and how many notes and folders it can see. Go deeper with list_folder. Requires the read permission.
+Start here. Returns who this token acts as (the name shown in the history), its access mode and permissions (for an allow list: the folders and notes it may reach), the top two levels of the folder tree with note ids, titles, versions, locks and hidden marks, and how many notes and folders it can see. Go deeper with list_folder. Requires the read permission.
 
 **Parameters**
 
@@ -473,15 +635,18 @@ None.
 | `instance.name` | string | Name of the wiki software. |
 | `access.kind` | "token" | Always token over MCP. |
 | `access.actorName` | string | The token's name: shown in the history for its changes. |
-| `access.permissions` | string[] | What this token may do (see Permissions). |
-| `access.folderScope` | array \| null | Folders (id, path) the token is limited to, with their subfolders; null: whole wiki. |
-| `tree.folder` | object \| null | The folder listed (id, name, path); null for the root level. |
+| `access.mode` | string | allow_list: only the listed folders (with everything below) and notes; nothing can be created at the root level. deny_list: the whole wiki this token can see (new content included), with one set of permissions. |
+| `access.permissions` | string[] | Every permission this token holds somewhere (see Permissions); on an allow list each entry has its own. |
+| `access.entries` | array \| null | allow_list: the listed targets (kind, id, path, permissions, inTrash), without those below a hidden folder; null otherwise. |
+| `tree.folder` | object \| null | The folder listed (id, name, path, locked, hidden); null for the root level. |
 | `tree.folders[]` | array | Subfolders, sorted by name. |
 | `tree.folders[].id` | string (uuid) | The folder's id. |
 | `tree.folders[].name` | string | The folder's name. |
 | `tree.folders[].path` | string | Folder names from the root joined by '/'. |
-| `tree.folders[].folderCount` | integer | Subfolders directly inside it. |
-| `tree.folders[].noteCount` | integer | Notes directly inside it. |
+| `tree.folders[].folderCount` | integer \| null | Subfolders directly inside it; null for a hidden folder. |
+| `tree.folders[].noteCount` | integer \| null | Notes directly inside it; null for a hidden folder. |
+| `tree.folders[].locked` | object \| null | Its lock state, as for notes (below). |
+| `tree.folders[].hidden` | object \| null | Its hidden state, as for notes (below). A hidden folder is never loaded and has no counts: what lies below it does not exist for agents, and listing it fails with hidden. |
 | `tree.folders[].loaded` | boolean | false where the requested depth ends: then folders and notes are left out (not empty); list the folder itself to open it. |
 | `tree.folders[].folders` | array (loaded only) | Its subfolders, same shape. |
 | `tree.folders[].notes` | array (loaded only) | Its notes, same shape as notes[]. |
@@ -492,6 +657,19 @@ None.
 | `tree.notes[].updatedAt` | string (ISO 8601) | When the latest version was written. |
 | `tree.notes[].updatedBy` | string | Who wrote it: a username or a token name. |
 | `tree.notes[].lastChange` | string | What the latest version changed: created, edited, renamed, moved or restored. |
+| `tree.notes[].locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `tree.notes[].locked.at` | string (ISO 8601) | When the lock was set. |
+| `tree.notes[].locked.by` | string | Who locked it: a username or a token name. |
+| `tree.notes[].locked.reason` | string \| null | Why it was locked. |
+| `tree.notes[].locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `tree.notes[].locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `tree.notes[].hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `tree.notes[].hidden.at` | string (ISO 8601) | When it was hidden. |
+| `tree.notes[].hidden.by` | string | Who hid it: a username or a token name. |
+| `tree.notes[].hidden.reason` | string \| null | Why it was hidden. |
+| `tree.notes[].hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `tree.notes[].hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
+| `tree.notes[].folderPath` | string (top of the root level only) | Only for a note this token may read on its own while it cannot see its folder (a single note on an allow list): the folder's path. |
 | `treeDepth` | integer | Folder levels the tree shows (2). |
 | `counts.notes` | integer | Notes this token can see. |
 | `counts.folders` | integer | Folders this token can see. |
@@ -516,23 +694,47 @@ and result
   "access": {
     "kind": "token",
     "actorName": "docs-agent",
+    "mode": "deny_list",
     "permissions": [
       "read",
       "search",
       "create",
-      "edit"
+      "edit",
+      "lock"
     ],
-    "folderScope": null
+    "entries": null
   },
   "tree": {
     "folder": null,
     "folders": [
+      {
+        "id": "6b0e3d71-4c2a-4f9e-8d15-a7c3e9f2b046",
+        "name": "Private",
+        "path": "Private",
+        "folderCount": null,
+        "noteCount": null,
+        "locked": null,
+        "hidden": {
+          "at": "2026-10-02T12:00:00.000Z",
+          "by": "alex",
+          "reason": "Customer contracts",
+          "inherited": false,
+          "from": {
+            "kind": "folder",
+            "id": "6b0e3d71-4c2a-4f9e-8d15-a7c3e9f2b046",
+            "path": "Private"
+          }
+        },
+        "loaded": false
+      },
       {
         "id": "3f2b8c1e-6d4a-4e7b-9a15-0c8d2e7f4b31",
         "name": "Projects",
         "path": "Projects",
         "folderCount": 1,
         "noteCount": 1,
+        "locked": null,
+        "hidden": null,
         "loaded": true,
         "folders": [
           {
@@ -541,6 +743,8 @@ and result
             "path": "Projects/Web",
             "folderCount": 0,
             "noteCount": 1,
+            "locked": null,
+            "hidden": null,
             "loaded": false
           }
         ],
@@ -551,7 +755,9 @@ and result
             "version": 2,
             "updatedAt": "2026-09-30T16:05:11.000Z",
             "updatedBy": "alex",
-            "lastChange": "edited"
+            "lastChange": "edited",
+            "locked": null,
+            "hidden": null
           }
         ]
       }
@@ -563,14 +769,16 @@ and result
         "version": 1,
         "updatedAt": "2026-09-01T10:00:00.000Z",
         "updatedBy": "alex",
-        "lastChange": "created"
+        "lastChange": "created",
+        "locked": null,
+        "hidden": null
       }
     ]
   },
   "treeDepth": 2,
   "counts": {
     "notes": 3,
-    "folders": 2
+    "folders": 3
   }
 }
 ```
@@ -592,13 +800,15 @@ List a folder's subfolders and notes (id, title, version, last change), or the r
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `folder` | object \| null | The folder listed (id, name, path); null for the root level. |
+| `folder` | object \| null | The folder listed (id, name, path, locked, hidden); null for the root level. |
 | `folders[]` | array | Subfolders, sorted by name. |
 | `folders[].id` | string (uuid) | The folder's id. |
 | `folders[].name` | string | The folder's name. |
 | `folders[].path` | string | Folder names from the root joined by '/'. |
-| `folders[].folderCount` | integer | Subfolders directly inside it. |
-| `folders[].noteCount` | integer | Notes directly inside it. |
+| `folders[].folderCount` | integer \| null | Subfolders directly inside it; null for a hidden folder. |
+| `folders[].noteCount` | integer \| null | Notes directly inside it; null for a hidden folder. |
+| `folders[].locked` | object \| null | Its lock state, as for notes (below). |
+| `folders[].hidden` | object \| null | Its hidden state, as for notes (below). A hidden folder is never loaded and has no counts: what lies below it does not exist for agents, and listing it fails with hidden. |
 | `folders[].loaded` | boolean | false where the requested depth ends: then folders and notes are left out (not empty); list the folder itself to open it. |
 | `folders[].folders` | array (loaded only) | Its subfolders, same shape. |
 | `folders[].notes` | array (loaded only) | Its notes, same shape as notes[]. |
@@ -609,11 +819,25 @@ List a folder's subfolders and notes (id, title, version, last change), or the r
 | `notes[].updatedAt` | string (ISO 8601) | When the latest version was written. |
 | `notes[].updatedBy` | string | Who wrote it: a username or a token name. |
 | `notes[].lastChange` | string | What the latest version changed: created, edited, renamed, moved or restored. |
+| `notes[].locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `notes[].locked.at` | string (ISO 8601) | When the lock was set. |
+| `notes[].locked.by` | string | Who locked it: a username or a token name. |
+| `notes[].locked.reason` | string \| null | Why it was locked. |
+| `notes[].locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `notes[].locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `notes[].hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `notes[].hidden.at` | string (ISO 8601) | When it was hidden. |
+| `notes[].hidden.by` | string | Who hid it: a username or a token name. |
+| `notes[].hidden.reason` | string \| null | Why it was hidden. |
+| `notes[].hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `notes[].hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
+| `notes[].folderPath` | string (top of the root level only) | Only for a note this token may read on its own while it cannot see its folder (a single note on an allow list): the folder's path. |
 
 **Errors**
 
-- `folder_not_found`: No such folder, or it lies outside this token's folders.
+- `folder_not_found`: No such folder, or it lies outside this token's folders (or below a hidden folder).
 - `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
+- `hidden`: The folder is hidden from agents: nothing below it can be listed or searched (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason).
 - the [common errors](#errors) every tool can return.
 
 **Example**: arguments
@@ -631,7 +855,9 @@ and result
   "folder": {
     "id": "3f2b8c1e-6d4a-4e7b-9a15-0c8d2e7f4b31",
     "name": "Projects",
-    "path": "Projects"
+    "path": "Projects",
+    "locked": null,
+    "hidden": null
   },
   "folders": [
     {
@@ -640,6 +866,8 @@ and result
       "path": "Projects/Web",
       "folderCount": 0,
       "noteCount": 1,
+      "locked": null,
+      "hidden": null,
       "loaded": false
     }
   ],
@@ -650,7 +878,9 @@ and result
       "version": 2,
       "updatedAt": "2026-09-30T16:05:11.000Z",
       "updatedBy": "alex",
-      "lastChange": "edited"
+      "lastChange": "edited",
+      "locked": null,
+      "hidden": null
     }
   ]
 }
@@ -660,7 +890,7 @@ and result
 
 **Search notes** · permission `search` · read-only
 
-Full-text search over all notes this token can see, ranked per section. Each hit names the note (noteId, title, folder path), the sectionPath to pass to read_section, its heading as written, a snippet of its text with matches marked «like this» (… where it is cut off), the note's current version and a relative rank. Search first, then read only the sections you need. Requires the search permission.
+Full-text search over all notes this token can see, ranked per section. Each hit names the note (noteId, title, folder path), the sectionPath to pass to read_section, its heading as written, a snippet of its text with matches marked «like this» (… where it is cut off), the note's current version and a relative rank. A hidden note is found by its title only (no section, heading or snippet); nothing below a hidden folder is searched. Search first, then read only the sections you need. Requires the search permission.
 
 **Parameters**
 
@@ -677,11 +907,17 @@ Full-text search over all notes this token can see, ranked per section. Each hit
 | `hits[]` | array | Best matches first; one hit per matching section. |
 | `hits[].noteId` | string (uuid) | The note's id. |
 | `hits[].title` | string | The note's title. |
-| `hits[].folderId` | string \| null | The note's folder; null for the root level. |
+| `hits[].folderId` | string \| null | The note's folder; null for the root level and for a folder this token cannot reach. |
 | `hits[].folderPath` | string | Folder names from the root joined by '/'. |
-| `hits[].sectionPath` | string | The matching section: pass it to read_section. |
-| `hits[].heading` | string | The section's heading as written, without marks; '' for the introduction. |
-| `hits[].snippet` | string | The section's text around the matches, without its heading line; matches marked «like this» (a phrase as one mark), '…' where text is left out. |
+| `hits[].sectionPath` | string \| null | The matching section: pass it to read_section. null for a hidden note's title. |
+| `hits[].heading` | string \| null | The section's heading as written, without marks; '' for the introduction; null for a hidden note's title. |
+| `hits[].snippet` | string | The section's text around the matches, without its heading line; matches marked «like this» (a phrase as one mark), '…' where text is left out. '' for a hidden note's title. |
+| `hits[].hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `hits[].hidden.at` | string (ISO 8601) | When it was hidden. |
+| `hits[].hidden.by` | string | Who hid it: a username or a token name. |
+| `hits[].hidden.reason` | string \| null | Why it was hidden. |
+| `hits[].hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `hits[].hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
 | `hits[].version` | integer | The note's current version. |
 | `hits[].rank` | number | Relevance relative to the best hit of this search: 1 for the best, 0 to 1 for the others (three decimals). |
 
@@ -689,6 +925,7 @@ Full-text search over all notes this token can see, ranked per section. Each hit
 
 - `folder_not_found`: folder_id names no folder this token can see.
 - `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
+- `hidden`: The folder is hidden from agents: nothing below it can be listed or searched (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason).
 - the [common errors](#errors) every tool can return.
 
 **Example**: arguments
@@ -714,7 +951,8 @@ and result
       "heading": "Branches",
       "snippet": "Use `feature/<topic>` and `fix/<topic>` in «kebab»-«case».",
       "version": 4,
-      "rank": 1
+      "rank": 1,
+      "hidden": null
     }
   ]
 }
@@ -738,7 +976,7 @@ Get a note's table of contents without its text: every section's path, heading l
 | --- | --- | --- |
 | `note.id` | string (uuid) | The note's id; never changes, even on rename or move. |
 | `note.title` | string | The note's title. |
-| `note.folderId` | string \| null | Folder the note is in; null for the root level. |
+| `note.folderId` | string \| null | Folder the note is in; null for the root level and for a folder this token cannot reach (a note listed on its own): folderPath still names it. |
 | `note.folderPath` | string | Folder names from the root joined by '/'; '' at the root. |
 | `note.path` | string | folderPath + '/' + title (the title alone at the root): usable as its address. |
 | `note.version` | integer | Current version: pass it as expected_version when writing. |
@@ -746,6 +984,18 @@ Get a note's table of contents without its text: every section's path, heading l
 | `note.createdBy` | string | Who created it: a username or an API token's name. |
 | `note.updatedAt` | string (ISO 8601) | When the latest version was written. |
 | `note.updatedBy` | string | Who wrote the latest version: a username or a token name. |
+| `note.locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `note.locked.at` | string (ISO 8601) | When the lock was set. |
+| `note.locked.by` | string | Who locked it: a username or a token name. |
+| `note.locked.reason` | string \| null | Why it was locked. |
+| `note.locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `note.locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `note.hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `note.hidden.at` | string (ISO 8601) | When it was hidden. |
+| `note.hidden.by` | string | Who hid it: a username or a token name. |
+| `note.hidden.reason` | string \| null | Why it was hidden. |
+| `note.hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `note.hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
 | `budget` | integer | The reading budget per section in estimated tokens. |
 | `sections[]` | array | The note's sections in reading order. |
 | `sections[].position` | integer | 0, 1, 2, … in reading order. |
@@ -759,9 +1009,10 @@ Get a note's table of contents without its text: every section's path, heading l
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- `hidden`: The note is hidden from agents: its content cannot be read (details: hiddenItem { kind, id, path }, title, hiddenAt, hiddenBy, reason). Only a person can unhide it.
 - the [common errors](#errors) every tool can return.
 
 **Example**: arguments
@@ -786,7 +1037,9 @@ and result
     "createdAt": "2026-09-14T08:12:40.000Z",
     "createdBy": "alex",
     "updatedAt": "2026-10-01T09:30:00.000Z",
-    "updatedBy": "docs-agent"
+    "updatedBy": "docs-agent",
+    "locked": null,
+    "hidden": null
   },
   "budget": 8000,
   "sections": [
@@ -846,7 +1099,7 @@ Read one section's Markdown from its heading line on, including its subsections 
 | --- | --- | --- |
 | `note.id` | string (uuid) | The note's id; never changes, even on rename or move. |
 | `note.title` | string | The note's title. |
-| `note.folderId` | string \| null | Folder the note is in; null for the root level. |
+| `note.folderId` | string \| null | Folder the note is in; null for the root level and for a folder this token cannot reach (a note listed on its own): folderPath still names it. |
 | `note.folderPath` | string | Folder names from the root joined by '/'; '' at the root. |
 | `note.path` | string | folderPath + '/' + title (the title alone at the root): usable as its address. |
 | `note.version` | integer | Current version: pass it as expected_version when writing. |
@@ -854,6 +1107,18 @@ Read one section's Markdown from its heading line on, including its subsections 
 | `note.createdBy` | string | Who created it: a username or an API token's name. |
 | `note.updatedAt` | string (ISO 8601) | When the latest version was written. |
 | `note.updatedBy` | string | Who wrote the latest version: a username or a token name. |
+| `note.locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `note.locked.at` | string (ISO 8601) | When the lock was set. |
+| `note.locked.by` | string | Who locked it: a username or a token name. |
+| `note.locked.reason` | string \| null | Why it was locked. |
+| `note.locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `note.locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `note.hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `note.hidden.at` | string (ISO 8601) | When it was hidden. |
+| `note.hidden.by` | string | Who hid it: a username or a token name. |
+| `note.hidden.reason` | string \| null | Why it was hidden. |
+| `note.hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `note.hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
 | `section.path` | string | The section's full path (also when you gave the heading only). |
 | `section.level` | integer | Heading level 1-6; 0 for the introduction. |
 | `section.heading` | string | The heading's text. |
@@ -871,9 +1136,10 @@ Read one section's Markdown from its heading line on, including its subsections 
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- `hidden`: The note is hidden from agents: its content cannot be read (details: hiddenItem { kind, id, path }, title, hiddenAt, hiddenBy, reason). Only a person can unhide it.
 - `section_not_found`: The note has no such section; paths lists the ones it has, section repeats yours.
 - `ambiguous_section`: The path's end (e.g. a heading that occurs twice) names several sections; candidates lists their full paths, section repeats the one you gave.
 - the [common errors](#errors) every tool can return.
@@ -901,7 +1167,9 @@ and result
     "createdAt": "2026-09-14T08:12:40.000Z",
     "createdBy": "alex",
     "updatedAt": "2026-10-01T09:30:00.000Z",
-    "updatedBy": "docs-agent"
+    "updatedBy": "docs-agent",
+    "locked": null,
+    "hidden": null
   },
   "section": {
     "path": "Naming conventions > Branches",
@@ -938,7 +1206,7 @@ Read a whole note: Markdown body, metadata, size (characters and estimated token
 | --- | --- | --- |
 | `note.id` | string (uuid) | The note's id; never changes, even on rename or move. |
 | `note.title` | string | The note's title. |
-| `note.folderId` | string \| null | Folder the note is in; null for the root level. |
+| `note.folderId` | string \| null | Folder the note is in; null for the root level and for a folder this token cannot reach (a note listed on its own): folderPath still names it. |
 | `note.folderPath` | string | Folder names from the root joined by '/'; '' at the root. |
 | `note.path` | string | folderPath + '/' + title (the title alone at the root): usable as its address. |
 | `note.version` | integer | Current version: pass it as expected_version when writing. |
@@ -946,6 +1214,18 @@ Read a whole note: Markdown body, metadata, size (characters and estimated token
 | `note.createdBy` | string | Who created it: a username or an API token's name. |
 | `note.updatedAt` | string (ISO 8601) | When the latest version was written. |
 | `note.updatedBy` | string | Who wrote the latest version: a username or a token name. |
+| `note.locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `note.locked.at` | string (ISO 8601) | When the lock was set. |
+| `note.locked.by` | string | Who locked it: a username or a token name. |
+| `note.locked.reason` | string \| null | Why it was locked. |
+| `note.locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `note.locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `note.hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `note.hidden.at` | string (ISO 8601) | When it was hidden. |
+| `note.hidden.by` | string | Who hid it: a username or a token name. |
+| `note.hidden.reason` | string \| null | Why it was hidden. |
+| `note.hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `note.hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
 | `note.body` | string | The whole Markdown body. |
 | `note.metadata` | object | Front matter kept from an import; usually {}. |
 | `note.characters` | integer | Length of the body in characters (code points). |
@@ -954,9 +1234,10 @@ Read a whole note: Markdown body, metadata, size (characters and estimated token
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- `hidden`: The note is hidden from agents: its content cannot be read (details: hiddenItem { kind, id, path }, title, hiddenAt, hiddenBy, reason). Only a person can unhide it.
 - the [common errors](#errors) every tool can return.
 
 **Example**: arguments
@@ -982,6 +1263,8 @@ and result
     "createdBy": "alex",
     "updatedAt": "2026-10-01T09:30:00.000Z",
     "updatedBy": "docs-agent",
+    "locked": null,
+    "hidden": null,
     "body": "# Naming conventions\n\nHow we name things.\n\n## Files\n\nkebab-case.\n",
     "metadata": {},
     "characters": 65,
@@ -1016,9 +1299,21 @@ List the notes changed after a time, newest first, one entry per note: its lates
 | `changes[].changes` | integer | How many versions were written since `since`. |
 | `changes[].actorName` | string | Who made the latest change: username or token name. |
 | `changes[].reason` | string \| null | The reason given with the latest change. |
-| `changes[].sectionPath` | string \| null | The section the latest change edited (replace_section); null for whole-note changes. |
+| `changes[].sectionPath` | string \| null | The section the latest change edited (replace_section); null for whole-note changes and for a hidden note. |
 | `changes[].changedAt` | string (ISO 8601) | When the latest change was made. |
 | `changes[].deleted` | boolean | true when the note is in the trash now. |
+| `changes[].locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `changes[].locked.at` | string (ISO 8601) | When the lock was set. |
+| `changes[].locked.by` | string | Who locked it: a username or a token name. |
+| `changes[].locked.reason` | string \| null | Why it was locked. |
+| `changes[].locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `changes[].locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `changes[].hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `changes[].hidden.at` | string (ISO 8601) | When it was hidden. |
+| `changes[].hidden.by` | string | Who hid it: a username or a token name. |
+| `changes[].hidden.reason` | string \| null | Why it was hidden. |
+| `changes[].hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `changes[].hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
 
 **Errors**
 
@@ -1048,7 +1343,9 @@ and result
       "reason": "Add branch naming rules",
       "sectionPath": "Naming conventions > Branches",
       "changedAt": "2026-10-01T09:30:00.000Z",
-      "deleted": false
+      "deleted": false,
+      "locked": null,
+      "hidden": null
     }
   ]
 }
@@ -1082,11 +1379,11 @@ List every version of a note, newest first: version number, time, author name (u
 | `revisions[].folderId` | string \| null | The note's folder at that version; null at the root or outside this token's folders. |
 | `revisions[].folderPath` | string \| null | That folder's current path ('' at the root); null if it no longer exists or lies outside this token's folders. |
 | `revisions[].folderOutsideScope` | boolean | True when that folder lies outside this token's folders; its id and path are not shown. |
-| `revisions[].sectionPath` | string \| null | The section a replace_section changed, as its path was then; null for whole-note changes and for versions written before this was recorded. |
+| `revisions[].sectionPath` | string \| null | The section a replace_section changed, as its path was then; null for whole-note changes, for versions written before this was recorded, and for a hidden note (headings are its content). |
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
 - the [common errors](#errors) every tool can return.
@@ -1170,6 +1467,7 @@ Read the full snapshot of one version of a note: title, Markdown body, metadata,
 - `not_found`: No such note visible to this token, or the note has no such version.
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- `hidden`: The note is hidden from agents: its content cannot be read (details: hiddenItem { kind, id, path }, title, hiddenAt, hiddenBy, reason). Only a person can unhide it.
 - the [common errors](#errors) every tool can return.
 
 **Example**: arguments
@@ -1231,6 +1529,8 @@ Create a note in a folder, or at the root level when folder_id is left out, with
 
 **Errors**
 
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: The target folder does not exist.
 - `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
 - `forbidden`: The target (or the root level) is outside this token's folders (reason: outside_scope).
@@ -1293,7 +1593,9 @@ Replace a note's title and/or its whole body. Pass expected_version from your la
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
 - `version_conflict`: The note has a newer version than expected_version (details: currentVersion, updatedAt, updatedBy, lastChange: change, reason, sectionPath). Nothing was written.
@@ -1357,7 +1659,9 @@ Replace one section of a note, from its heading line on (with its subsections un
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
 - `section_not_found`: The note has no such section; paths lists the ones it has, section repeats yours.
@@ -1422,7 +1726,9 @@ Move a note into another folder (folder_id null: the root level); its id stays t
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
 - `version_conflict`: The note has a newer version than expected_version (details: currentVersion, updatedAt, updatedBy, lastChange: change, reason, sectionPath). Nothing was written.
@@ -1483,6 +1789,8 @@ Create a folder inside a parent folder, or at the root level when parent_id is l
 
 **Errors**
 
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: The parent folder does not exist.
 - `folder_in_trash`: The parent folder is in the trash (details: folderId, path, deletedAt, purgeAt, batchId, batchRootId/batchRootPath when it went with a folder above it).
 - `forbidden`: The parent (or the root level) is outside this token's folders (reason: outside_scope).
@@ -1537,6 +1845,8 @@ Give a folder a new name; its id, its contents and the notes' ids stay the same,
 
 **Errors**
 
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: No folder in use that this token can see has that id.
 - `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
 - `name_taken`: The parent already has a folder with this name, case ignored (details: existingFolderId, path): choose another name, or rename that folder first.
@@ -1590,6 +1900,8 @@ Move a folder with everything in it into another parent folder (parent_id null: 
 
 **Errors**
 
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: folder_id or parent_id names no folder in use this token can see.
 - `folder_in_trash`: The folder or the target parent is in the trash (details: folderId, path, deletedAt, purgeAt, batchId, batchRootId/batchRootPath when it went with a folder above it).
 - `forbidden`: The parent (or the root level) is outside this token's folders (reason: outside_scope).
@@ -1647,7 +1959,9 @@ Move a note to the trash: it disappears from reads, search and listings, its tit
 
 **Errors**
 
-- `not_found`: No note this token can see has that id, title or path.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
 - `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
 - `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
 - `version_conflict`: The note has a newer version than expected_version (details as for update_note). Nothing was deleted.
@@ -1705,6 +2019,9 @@ Move a folder with all its subfolders and notes to the trash, as one batch: rest
 
 **Errors**
 
+- `hidden`: The folder itself, or a note or folder inside it that would go along, is hidden from agents (details: hiddenItem { kind, id, path } names it, hiddenAt, hiddenBy, reason; locked: a lock refusing it as well, or null). This answer comes first, also when items out of reach lie inside too. Nothing was changed; only a person can unhide it.
+- `forbidden`: reason hidden_content: the folder holds notes or folders outside this token's reach (not listed on an allow list, excluded on a deny list; they are not named), which would go along. Nothing was changed. Ask a person.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: No folder in use that this token can see has that id.
 - `folder_in_trash`: The folder is in the trash already (details: folderId, path, deletedAt, purgeAt, batchId, batchRootId/batchRootPath when it went with a folder above it).
 - the [common errors](#errors) every tool can return.
@@ -1848,6 +2165,8 @@ Bring a note back from the trash, by its id: into the folder it was deleted from
 
 **Errors**
 
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `not_found`: No note this token can see has that id.
 - `note_not_deleted`: The note is not in the trash.
 - `parent_in_trash`: The folder it would come back into is in the trash itself (details: folderId, path): restore that folder first, or (restore_note) pass folder_id.
@@ -1905,6 +2224,9 @@ Bring a folder back from the trash, by its id, together with everything that was
 
 **Errors**
 
+- `hidden`: The folder itself, or a note or folder inside it that would go along, is hidden from agents (details: hiddenItem { kind, id, path } names it, hiddenAt, hiddenBy, reason; locked: a lock refusing it as well, or null). This answer comes first, also when items out of reach lie inside too. Nothing was changed; only a person can unhide it.
+- `forbidden`: reason hidden_content: the folder holds notes or folders outside this token's reach (not listed on an allow list, excluded on a deny list; they are not named), which would go along. Nothing was changed. Ask a person.
+- `locked`: The note or folder, or a folder above it (or the target folder), is locked: agents cannot change, move, rename, delete, restore or create inside it (details: lockedItem { kind, id, path } holding the lock, lockedAt, lockedBy, reason). Only a person can unlock it; ask one, or leave it as it is.
 - `folder_not_found`: No folder this token can see has that id.
 - `folder_not_deleted`: The folder is not in the trash.
 - `parent_in_trash`: The folder it would come back into is in the trash itself (details: folderId, path): restore that folder first, or (restore_note) pass folder_id.
@@ -1933,6 +2255,276 @@ and result
 }
 ```
 
+### `lock_note`
+
+**Lock note** · permission `lock` · writes
+
+Lock a note so that no agent changes it any more. Agents (this one too) can then no longer change, move, rename, delete or restore it; reading stays possible. Only a person can unlock it. Give a reason; it is shown with the lock. Locking a note that holds a lock of its own already changes nothing (changed: false); one in a locked folder answers locked with alreadyLocked: true. Requires the lock permission.
+
+**Parameters**
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `note` | string, 1-4000 chars | yes |  | The note: its id (preferred: ids never change), its title, or folder path + title ('Projects/Naming conventions'; '/Title' for the root level). A title several notes share fails with ambiguous_note and lists the candidates. |
+| `reason` | string, 1-500 chars | yes |  | Why you lock it, one short sentence (max 500 characters). Required: people see it next to the lock, and only they can lift it. |
+
+**Result**
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | note or folder. |
+| `id` | string (uuid) | Its id. |
+| `path` | string | Its path. |
+| `locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `locked.at` | string (ISO 8601) | When the lock was set. |
+| `locked.by` | string | Who locked it: a username or a token name. |
+| `locked.reason` | string \| null | Why it was locked. |
+| `locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `changed` | boolean | false when it held a lock of its own already: that lock stays as it was (who, when, why). |
+| `message` | string (only if changed is false) | Says that it was locked already. |
+
+**Errors**
+
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
+- `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
+- `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: A folder above it is locked already, so it is locked with it and nothing needs to be done (details: alreadyLocked: true; lockedItem: the folder holding the lock; lockedAt, lockedBy, reason).
+- the [common errors](#errors) every tool can return.
+
+**Example**: arguments
+
+```json
+{
+  "note": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+  "reason": "Release notes are final"
+}
+```
+
+and result
+
+```json
+{
+  "kind": "note",
+  "id": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+  "path": "Projects/Release checklist",
+  "locked": {
+    "at": "2026-10-02T12:00:00.000Z",
+    "by": "docs-agent",
+    "reason": "Release notes are final",
+    "inherited": false,
+    "from": {
+      "kind": "note",
+      "id": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+      "path": "Projects/Release checklist"
+    }
+  },
+  "changed": true
+}
+```
+
+### `lock_folder`
+
+**Lock folder** · permission `lock` · writes
+
+Lock a folder with everything below it, also notes and folders created there later, so that no agent changes any of it. Agents (this one too) can then no longer change, move, rename, delete or restore it; reading stays possible. Only a person can unlock it. Give a reason; it is shown with the lock. Locking a folder that holds a lock of its own already changes nothing (changed: false); one inside a locked folder answers locked with alreadyLocked: true. Requires the lock permission.
+
+**Parameters**
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `folder_id` | string (uuid) | yes |  | The folder to lock, with everything below it (also what is created there later). |
+| `reason` | string, 1-500 chars | yes |  | Why you lock it, one short sentence (max 500 characters). Required: people see it next to the lock, and only they can lift it. |
+
+**Result**
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | note or folder. |
+| `id` | string (uuid) | Its id. |
+| `path` | string | Its path. |
+| `locked` | object \| null | null when not locked. Locked: agents cannot change, move, rename, delete or create inside it (error locked); reading is fine. Only people unlock. |
+| `locked.at` | string (ISO 8601) | When the lock was set. |
+| `locked.by` | string | Who locked it: a username or a token name. |
+| `locked.reason` | string \| null | Why it was locked. |
+| `locked.inherited` | boolean | true when a folder above it holds the lock. |
+| `locked.from` | object | The item holding the lock: kind (note, folder), id (null for a folder this token cannot see), path. |
+| `changed` | boolean | false when it held a lock of its own already: that lock stays as it was (who, when, why). |
+| `message` | string (only if changed is false) | Says that it was locked already. |
+
+**Errors**
+
+- `folder_not_found`: No folder in use that this token can see has that id.
+- `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
+- `hidden`: The note or folder (or the target folder, or something inside a folder that would go along) is hidden from agents: they cannot change, move, rename, delete, restore, lock or create inside it (details: hiddenItem { kind, id, path }, hiddenAt, hiddenBy, reason; locked: the lock that refuses it as well, or null). Hidden wins over locked. Only a person can unhide it; ask one.
+- `locked`: A folder above it is locked already, so it is locked with it and nothing needs to be done (details: alreadyLocked: true; lockedItem: the folder holding the lock; lockedAt, lockedBy, reason).
+- the [common errors](#errors) every tool can return.
+
+**Example**: arguments
+
+```json
+{
+  "folder_id": "c47e2a18-9b3d-4a5f-8e61-2d0b7f9c3a84",
+  "reason": "Archived; keep as it is"
+}
+```
+
+and result
+
+```json
+{
+  "kind": "folder",
+  "id": "c47e2a18-9b3d-4a5f-8e61-2d0b7f9c3a84",
+  "path": "Archive",
+  "locked": {
+    "at": "2026-10-02T12:00:00.000Z",
+    "by": "docs-agent",
+    "reason": "Archived; keep as it is",
+    "inherited": false,
+    "from": {
+      "kind": "folder",
+      "id": "c47e2a18-9b3d-4a5f-8e61-2d0b7f9c3a84",
+      "path": "Archive"
+    }
+  },
+  "changed": true
+}
+```
+
+### `hide_note`
+
+**Hide note** · permission `hide` · writes
+
+Hide a note's content from agents: its title, path and id stay visible, but its body, outline, sections and the bodies of its revisions can no longer be read by any agent (error hidden), and search finds it by its title only. Agents (this one too) can then no longer change, move, rename, delete, restore or lock it, and only a person can unhide it. A lock it has stays; hiding a locked item is allowed. Give a reason; it is shown with the hidden note. Hiding a note that is hidden already changes nothing (changed: false). Requires the hide permission.
+
+**Parameters**
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `note` | string, 1-4000 chars | yes |  | The note: its id (preferred: ids never change), its title, or folder path + title ('Projects/Naming conventions'; '/Title' for the root level). A title several notes share fails with ambiguous_note and lists the candidates. |
+| `reason` | string, 1-500 chars | yes |  | Why you hide it, one short sentence (max 500 characters). Required: people see it next to the hidden item, and only they can unhide it. |
+
+**Result**
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | note or folder. |
+| `id` | string (uuid) | Its id. |
+| `path` | string | Its path. |
+| `hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `hidden.at` | string (ISO 8601) | When it was hidden. |
+| `hidden.by` | string | Who hid it: a username or a token name. |
+| `hidden.reason` | string \| null | Why it was hidden. |
+| `hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
+| `changed` | boolean | false when it was hidden itself already: that mark stays as it was (who, when, why). |
+| `message` | string (only if changed is false) | Says that it was hidden already. |
+
+**Errors**
+
+- `not_found`: No note this token can see has that id, title or path (also any note below a hidden folder).
+- `ambiguous_note`: Several notes have that title; candidates lists their ids and paths.
+- `in_trash`: The note with that id is in the trash (details: deletedAt, purgeAt, batchId, path where it was; batchRootId and batchRootPath when it went with a folder); restore it with restore_note (or that folder with restore_folder) to use it.
+- the [common errors](#errors) every tool can return.
+
+**Example**: arguments
+
+```json
+{
+  "note": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+  "reason": "Contains customer names"
+}
+```
+
+and result
+
+```json
+{
+  "kind": "note",
+  "id": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+  "path": "Projects/Release checklist",
+  "hidden": {
+    "at": "2026-10-02T12:00:00.000Z",
+    "by": "docs-agent",
+    "reason": "Contains customer names",
+    "inherited": false,
+    "from": {
+      "kind": "note",
+      "id": "e2b74c90-1a6d-4f8e-93c5-7b2d0e4f1a68",
+      "path": "Projects/Release checklist"
+    }
+  },
+  "changed": true
+}
+```
+
+### `hide_folder`
+
+**Hide folder** · permission `hide` · writes
+
+Hide a folder from agents with everything below it, also notes and folders created there later: the folder itself stays visible (name, hidden state), but nothing below it exists for any agent any more - not in listings, search, changes or the trash, and addressing it answers not found. Agents (this one too) can then no longer change, move, rename, delete, restore or lock it, and only a person can unhide it. A lock it has stays; hiding a locked item is allowed. Give a reason; it is shown with the hidden folder. Hiding a folder that is hidden already changes nothing (changed: false). Requires the hide permission.
+
+**Parameters**
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `folder_id` | string (uuid) | yes |  | The folder to hide, with everything below it (also what is created there later). |
+| `reason` | string, 1-500 chars | yes |  | Why you hide it, one short sentence (max 500 characters). Required: people see it next to the hidden item, and only they can unhide it. |
+
+**Result**
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | string | note or folder. |
+| `id` | string (uuid) | Its id. |
+| `path` | string | Its path. |
+| `hidden` | object \| null | null when not hidden. Hidden: agents cannot read a hidden note's content (error hidden), and nothing below a hidden folder exists for them; agents cannot change it either. Only people unhide. |
+| `hidden.at` | string (ISO 8601) | When it was hidden. |
+| `hidden.by` | string | Who hid it: a username or a token name. |
+| `hidden.reason` | string \| null | Why it was hidden. |
+| `hidden.inherited` | boolean | true when a folder above it is hidden (never for agents: they do not see what lies below a hidden folder). |
+| `hidden.from` | object | The item hidden itself: kind (note, folder), id, path. |
+| `changed` | boolean | false when it was hidden itself already: that mark stays as it was (who, when, why). |
+| `message` | string (only if changed is false) | Says that it was hidden already. |
+
+**Errors**
+
+- `folder_not_found`: No folder in use that this token can see has that id (also any folder below a hidden one).
+- `folder_in_trash`: That folder is in the trash (details: folderId, path where it was, deletedAt, purgeAt, batchId; batchRootId and batchRootPath when it went with a folder above it, which restore_folder takes); restore it with restore_folder first.
+- the [common errors](#errors) every tool can return.
+
+**Example**: arguments
+
+```json
+{
+  "folder_id": "6b0e3d71-4c2a-4f9e-8d15-a7c3e9f2b046",
+  "reason": "Customer contracts"
+}
+```
+
+and result
+
+```json
+{
+  "kind": "folder",
+  "id": "6b0e3d71-4c2a-4f9e-8d15-a7c3e9f2b046",
+  "path": "Private",
+  "hidden": {
+    "at": "2026-10-02T12:00:00.000Z",
+    "by": "docs-agent",
+    "reason": "Customer contracts",
+    "inherited": false,
+    "from": {
+      "kind": "folder",
+      "id": "6b0e3d71-4c2a-4f9e-8d15-a7c3e9f2b046",
+      "path": "Private"
+    }
+  },
+  "changed": true
+}
+```
+
 <!-- END GENERATED: mcp-tools -->
 
 ## Errors
@@ -1949,15 +2541,17 @@ codes, details. The codes are the same as in the HTTP API.
 | `ambiguous_note` | Several notes have that title. `candidates` lists up to 20 with `id` and `path`. | Repeat with the id or path of the right candidate. |
 | `ambiguous_section` | The path's end fits several sections (e.g. a heading that occurs twice). `candidates` lists their full paths; `section` repeats the path you gave. | Repeat with the full path. |
 | `version_conflict` | The note has a newer version than `expected_version`. Details: `currentVersion`, `updatedAt`, `updatedBy`, `lastChange` (`change`, `reason`, `sectionPath`), and for `replace_section` `currentSection`. Nothing was written. | Read again, merge your change, retry with `currentVersion`. |
-| `title_taken` | The folder already has a note with this title (ignoring case). Details: `existingNoteId`, `path`. | Choose another title, or update the existing note; when restoring, pass another `title` or restore into another `folder_id`. |
-| `name_taken` | The parent already has a folder with this name (ignoring case): creating, renaming, moving or restoring a folder. Details: `existingFolderId`, `path`. | Use the existing folder, choose another name, or rename or move that folder first. |
+| `title_taken` | The folder already has a note with this title (ignoring case). Details: `existingNoteId` (null when that note is out of the token's reach), `path`. | Choose another title, or update the existing note; when restoring, pass another `title` or restore into another `folder_id`. |
+| `name_taken` | The parent already has a folder with this name (ignoring case): creating, renaming, moving or restoring a folder. Details: `existingFolderId` (null when that folder is out of the token's reach), `path`. | Use the existing folder, choose another name, or rename or move that folder first. |
 | `folder_cycle` | `move_folder` named the folder itself or one of its subfolders as the new parent. Details: `folderId`, `path` (the folder), `parentId`, `parentPath` (the target inside it). | Choose a parent outside the folder's subtree. |
 | `in_trash` | The note named by its id is in the trash. Details: `deletedAt`, `purgeAt`, `batchId`, `path` (where it was); `batchRootId`, `batchRootPath` when it went with a folder. | Restore it with `restore_note` if it is still needed (or the folder with `restore_folder`). |
-| `folder_in_trash` | The folder named by its id is in the trash (only for a folder inside the token's folders; outside them `folder_not_found`). Details: `folderId`, `path` (where it was), `deletedAt`, `purgeAt`, `batchId`; `batchRootId`, `batchRootPath` when it went with a folder above it (left out when that folder lies outside the token's folders). | Restore it with `restore_folder`: `batchRootId` when given, else `folderId`; or use another folder. |
+| `folder_in_trash` | The folder named by its id is in the trash (only for a folder the token can reach; otherwise `folder_not_found`). Details: `folderId`, `path` (where it was), `deletedAt`, `purgeAt`, `batchId`; `batchRootId`, `batchRootPath` when it went with a folder above it (left out when that folder is out of the token's reach). | Restore it with `restore_folder`: `batchRootId` when given, else `folderId`; or use another folder. |
 | `parent_in_trash` | The folder a note or folder would be restored into is in the trash itself. Details: `folderId`, `path`. | Restore that folder first (`restore_folder`), or pass `folder_id` to `restore_note`. |
 | `note_not_deleted` | `restore_note` named a note that is not in the trash. | Nothing to restore; use the note. |
 | `folder_not_deleted` | `restore_folder` named a folder that is not in the trash. | Nothing to restore; use the folder. |
-| `forbidden` | The token lacks the permission (`permission` names it), or the target folder is outside its folders (`reason: "outside_scope"`). Over HTTP also `reason: "session_required"` (deleting for good) and `"admin_required"` (emptying the trash). | Do not retry; tell the user which permission or folder access is needed. |
+| `hidden` | The note is hidden from agents and its content was asked for (`read_note`, `read_outline`, `read_section`, `read_revision`), a hidden folder was listed or searched, or a write would change, move, rename, delete, restore, lock or create inside a hidden note or folder (also one that a folder to delete or restore holds; this comes before `forbidden` with `hidden_content`). Details: `hiddenItem` (`kind`, `id`, `path`), `title` (notes), `hiddenAt`, `hiddenBy`, `reason`; for writes `locked`: the details of a lock refusing it as well, or null (hidden wins over locked). Nothing was written. (HTTP 403) | Do not retry; work without it or ask a person to unhide it. |
+| `locked` | The note or folder, a folder above it, or the target folder is locked: agents cannot change, move, rename, delete, restore or create inside it. Details: `lockedItem` (`kind`, `id`, `path` of the item holding the lock; `id` null for a folder the token cannot see), `lockedAt`, `lockedBy`, `reason`; `alreadyLocked: true` from `lock_note` / `lock_folder` when a folder above holds the lock already. Nothing was written. (HTTP 423) | Do not retry; leave it as it is or ask a person to unlock it. With `alreadyLocked`, nothing needs to be done. |
+| `forbidden` | The token lacks the permission (`permission` names it), the target folder (or, for an allow list, the root level) is out of its reach (`reason: "outside_scope"`), or a folder to delete or restore holds items out of its reach (`reason: "hidden_content"`; a hidden item it can see answers `hidden` instead). Over HTTP also `reason: "session_required"` (deleting for good, unlocking, unhiding, the list of hidden items) and `"admin_required"` (emptying the trash). | Do not retry; tell the user which permission or access is needed. |
 | `invalid_input` | An argument breaks its rule. `fields` has one entry per argument: `code` (as in the HTTP API: `required`, `empty`, `invalid_type`, `too_long`, `invalid_format`, `invalid`), `params` where useful (e.g. `max`) and `rule`, an English sentence such as `title must not be empty` or `title must not contain '/' or control characters such as line breaks and tabs`. Also when the note would exceed 1 MiB after `replace_section` (`fields.body`). Nothing was written. | Fix the named arguments and call again. |
 | `token_revoked` | The token was revoked. | Stop; ask the user for a new token. |
 | `token_expired` | The token has expired. | Stop; ask the user for a new token. |
@@ -1986,7 +2580,10 @@ The web app and scripts use the same operations over HTTP at `/api/notes/v1`
 (session or the same bearer token), with the same permission checks and
 error codes; it also offers what MCP has no tool for: deleting from the
 trash for good, which only signed-in people can do, with the password
-re-entered in the last 10 minutes (an API token gets 403 there). The OpenAPI document is served at
+re-entered in the last 10 minutes (an API token gets 403 there), unlocking
+and unhiding (signed-in people only; unhiding with the password re-entered
+as well), the list of locked items (`GET /locked`) and the list of hidden
+items (`GET /hidden`, signed-in people only). The OpenAPI document is served at
 `/api/notes/v1/openapi.json`; the contract is described in
 `apps/server/src/api/notes/v1/index.ts`.
 
@@ -1997,7 +2594,8 @@ re-entered in the last 10 minutes (an API token gets 403 there). The OpenAPI doc
 | Note body | 1 MiB (UTF-8), also after `replace_section` |
 | Note title | 200 characters, no `/` or line breaks |
 | Folder name | 120 characters, no `/` or line breaks |
-| Reason | 500 characters |
+| Reason (also a lock's or hide reason) | 500 characters |
+| Entries of a token's access list | 200 |
 | Search query | 500 characters |
 | `search_notes` hits | default 20, max 50 |
 | `list_folder` depth | default 1, max 10 |

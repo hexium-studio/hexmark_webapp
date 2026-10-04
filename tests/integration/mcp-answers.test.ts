@@ -177,6 +177,8 @@ describe("listings", () => {
       path: "Box",
       folderCount: 1,
       noteCount: 1,
+      locked: null,
+      hidden: null,
       loaded: false,
     });
     const deeper = await tool(agent, "list_folder", { depth: 2 });

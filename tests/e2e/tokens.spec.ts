@@ -8,10 +8,13 @@ import {
   confirmDialog,
   createButton,
   createFolder,
+  modeRadio,
   nameField,
+  openFolder,
   shownConfig,
   signInToTokens,
   submitToken,
+  treeBox,
 } from "./helpers/tokens";
 import { toasts } from "./helpers/wizard";
 
@@ -36,17 +39,26 @@ test("creates a token, shows it once, and revokes it", async ({ page, stack, con
   await signInToTokens(page, stack, ADA);
   await expect(page.getByText(t("tokens.list.none"))).toBeVisible();
 
-  // Defaults: read and search; no folders exist, so the whole wiki.
+  // No mode is chosen at first, and none is assumed.
+  await expect(modeRadio(page, "en", "allow_list")).not.toBeChecked();
+  await expect(modeRadio(page, "en", "deny_list")).not.toBeChecked();
+  await expect(page.getByText(t("tokens.form.access.deny_list.detail"))).toBeVisible();
+  await nameField(page, "en").fill("claude-code-laptop");
+  await createButton(page, "en").click();
+  await expect(page.getByText(t("tokens.form.access.modeMissing"))).toBeVisible();
+  await expect(modeRadio(page, "en", "allow_list")).toBeFocused();
+  await expect(confirmDialog(page, "en")).toHaveCount(0);
+
+  // Everything except: read and search by default; lock is offered now.
+  await modeRadio(page, "en", "deny_list").check();
   const box = (key: string) => page.getByRole("checkbox", { name: t(`tokens.permissions.${key}`) });
   await expect(box("read")).toBeChecked();
   await expect(box("search")).toBeChecked();
-  for (const key of ["create", "edit", "move", "delete"]) await expect(box(key)).not.toBeChecked();
-  // No tool uses it yet: not offered (the server would still accept it).
-  await expect(box("lock")).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: t("tokens.form.scope.label") })).toHaveCount(0);
+  for (const key of ["create", "edit", "move", "delete", "lock"]) {
+    await expect(box(key)).not.toBeChecked();
+  }
 
   // No recent password confirmation: the dialog asks for it first.
-  await nameField(page, "en").fill("claude-code-laptop");
   await submitToken(page, "en", ADA.password);
   const heading = page.getByRole("heading", {
     name: t("tokens.created.heading", { name: "claude-code-laptop" }),
@@ -100,6 +112,7 @@ test("creates a token, shows it once, and revokes it", async ({ page, stack, con
   await expect(item).toContainText(
     `${t("tokens.permissions.read")}, ${t("tokens.permissions.search")}`,
   );
+  await expect(item).toContainText(t("tokens.form.access.deny_list.label"));
   await expect(item).toContainText(t("tokens.list.wholeWiki"));
 
   // Revoking: confirmed in a dialog, gone from the list, refused at once.
@@ -116,10 +129,12 @@ test("creates a token, shows it once, and revokes it", async ({ page, stack, con
 test("a taken name is shown at the field without moving the form", async ({ page, stack }) => {
   await signInToTokens(page, stack, ADA);
   await nameField(page, "en").fill("agent");
+  await modeRadio(page, "en", "deny_list").check();
   await submitToken(page, "en", ADA.password);
   await page.getByRole("button", { name: t("tokens.created.done") }).click();
 
-  const legend = page.locator("#token-permissions legend");
+  await modeRadio(page, "en", "deny_list").check();
+  const legend = page.locator("#token-mode legend");
   // Position in the document (the viewport may scroll to the field).
   const top = () => legend.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
   const before = await top();
@@ -139,6 +154,7 @@ test("a taken name is shown at the field without moving the form", async ({ page
 test("a guest can give read and search only", async ({ page, stack }) => {
   const guest = { ...ADA, email: "guest@example.com", username: "guest", role: "guest" as const };
   await signInToTokens(page, stack, guest);
+  await modeRadio(page, "en", "deny_list").check();
   const boxes = page.getByRole("checkbox");
   await expect(boxes).toHaveCount(2);
   await expect(page.getByRole("checkbox", { name: t("tokens.permissions.read") })).toBeChecked();
@@ -146,28 +162,31 @@ test("a guest can give read and search only", async ({ page, stack }) => {
   await expect(page.getByText(t("tokens.form.permissions.guestHint"))).toBeVisible();
 });
 
-test("limits a token to chosen folders", async ({ page, stack }) => {
+test("limits a token to folders and notes picked at any depth", async ({ page, stack }) => {
   await signInToTokens(page, stack, ADA);
   const projects = await createFolder(page, stack, "Projects");
-  await createFolder(page, stack, "Web", projects);
+  const web = await createFolder(page, stack, "Web", projects);
+  await createFolder(page, stack, "Deep", web);
   await page.reload();
 
   await nameField(page, "en").fill("web-agent");
-  await page
-    .getByRole("combobox", { name: t("tokens.form.scope.label") })
-    .selectOption({ label: t("tokens.form.scope.folders") });
+  await modeRadio(page, "en", "allow_list").check();
   await createButton(page, "en").click();
-  await expect(page.getByText(t("tokens.form.scope.foldersMissing"))).toBeVisible();
+  await expect(page.getByText(t("tokens.form.access.entriesMissing"))).toBeVisible();
   await expect(confirmDialog(page, "en")).toHaveCount(0);
 
-  await page.getByRole("checkbox", { name: "Projects/Web" }).check();
-  // Offered again since the trash tools use it.
-  await page.getByRole("checkbox", { name: t("tokens.permissions.delete") }).check();
+  await openFolder(page, "en", "Projects");
+  await openFolder(page, "en", "Web");
+  await treeBox(page, "en", "folder", "Deep").check();
+  const entry = page.locator("#token-entries li").filter({ hasText: "Projects/Web/Deep" });
+  await expect(entry).toBeVisible();
+  // Each entry has its own permissions: read and search to start with.
+  await entry.getByRole("checkbox", { name: t("tokens.permissions.delete") }).check();
   await submitToken(page, "en", ADA.password);
   await page.getByRole("button", { name: t("tokens.created.done") }).click();
   const item = page.getByRole("listitem").filter({ hasText: "web-agent" });
-  await expect(item).toContainText("Projects/Web");
-  await expect(item).not.toContainText(t("tokens.list.wholeWiki"));
+  await expect(item).toContainText("Projects/Web/Deep");
+  await expect(item).toContainText(t("tokens.form.access.allow_list.label"));
   await expect(item).toContainText(
     `${t("tokens.permissions.read")}, ${t("tokens.permissions.search")}, ` +
       t("tokens.permissions.delete"),

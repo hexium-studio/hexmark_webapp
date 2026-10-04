@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFolderChoices } from "@/lib/api-tokens/folders";
 import { deriveMcpUrl, serverPort } from "@/lib/api-tokens/mcp-url";
 import { defaultPermissions, offeredPermissions } from "@/lib/api-tokens/offered-permissions";
 import { readTokenFailure } from "@/lib/api-tokens/token-result";
@@ -8,8 +7,9 @@ import { parseTrustConfig } from "@/lib/client-origin/trusted-proxies";
 
 // The token page's pure parts: the MCP address built when the API server has
 // no MCP_PUBLIC_URL (host of the request, SERVER_PORT, https only behind a
-// trusted proxy that says so), the permissions offered per role, the folder
-// list for the scope and how refusals are read.
+// trusted proxy that says so), the permissions offered per role and kind of
+// target, the target tree, the access a form sends, how tokens and refusals
+// are read, and the locked items list.
 
 describe("MCP address without MCP_PUBLIC_URL", () => {
   it("uses the request host and SERVER_PORT", () => {
@@ -66,48 +66,27 @@ describe("MCP address without MCP_PUBLIC_URL", () => {
   });
 });
 
-describe("permissions offered for a new token", () => {
-  it("offers what the role grants, with delete (trash tools) and without lock (no tool yet)", () => {
-    const all = ["read", "search", "create", "edit", "move", "delete"];
+describe("permissions offered for a token", () => {
+  it("offers what the role grants, lock and hide included; a single note no create or search", () => {
+    const all = ["read", "search", "create", "edit", "move", "delete", "lock", "hide"];
     expect(offeredPermissions("admin")).toEqual(all);
-    expect(offeredPermissions("user")).toEqual(all);
+    expect(offeredPermissions("user", "folder")).toEqual(all);
+    expect(offeredPermissions("user", "note")).toEqual([
+      "read",
+      "edit",
+      "move",
+      "delete",
+      "lock",
+      "hide",
+    ]);
     expect(offeredPermissions("guest")).toEqual(["read", "search"]);
+    expect(offeredPermissions("guest", "note")).toEqual(["read"]);
   });
 
-  it("checks read and search by default", () => {
+  it("checks read and search by default, as far as offered", () => {
     expect(defaultPermissions("admin")).toEqual(["read", "search"]);
     expect(defaultPermissions("guest")).toEqual(["read", "search"]);
-  });
-});
-
-describe("folders for the scope", () => {
-  it("flattens the tree, ordered by path, with depths", () => {
-    const body = {
-      folder: null,
-      notes: [],
-      folders: [
-        {
-          id: "b",
-          name: "Projects",
-          path: "Projects",
-          loaded: true,
-          notes: [],
-          folders: [{ id: "c", name: "Web", path: "Projects/Web", loaded: false, folderCount: 2 }],
-        },
-        { id: "a", name: "Archive", path: "Archive", loaded: true, folders: [], notes: [] },
-      ],
-    };
-    expect(readFolderChoices(body)).toEqual([
-      { id: "a", name: "Archive", path: "Archive", depth: 0 },
-      { id: "b", name: "Projects", path: "Projects", depth: 0 },
-      { id: "c", name: "Web", path: "Projects/Web", depth: 1 },
-    ]);
-    expect(readFolderChoices({ folders: [] })).toEqual([]);
-    expect(readFolderChoices({ folders: [{ id: 1 }] })).toBeUndefined();
-    expect(readFolderChoices({})).toBeUndefined();
-    const broken = { folders: [{ id: "x", name: "X", path: "X", folders: null }] };
-    expect(readFolderChoices(broken)).toBeUndefined();
-    expect(readFolderChoices("nope")).toBeUndefined();
+    expect(defaultPermissions("user", "note")).toEqual(["read"]);
   });
 });
 
@@ -129,9 +108,9 @@ describe("refusals of the token API", () => {
     const validation = readTokenFailure({
       reachable: true,
       status: 400,
-      body: { error: "validation", fields: { permissions: { code: "required" } } },
+      body: { error: "validation", fields: { mode: { code: "required" } } },
     });
-    expect(validation.fields).toEqual({ permissions: { code: "required" } });
+    expect(validation.fields).toEqual({ mode: { code: "required" } });
     expect(readTokenFailure({ reachable: true, status: 500, body: null }).error).toBe("unexpected");
     expect(readTokenFailure({ reachable: false }).error).toBe("server_unreachable");
   });

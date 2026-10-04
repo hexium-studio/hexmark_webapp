@@ -125,8 +125,15 @@ describe("invalid arguments", () => {
   });
 
   it("answers an unknown tool with a JSON-RPC error, as the SDK does", async () => {
-    // Also the tools an agent might look for to delete for good: there are none.
-    for (const name of ["lock_note", "purge_note", "empty_trash", "delete_note_permanently"]) {
+    // Also the tools an agent might look for to delete for good or to unlock:
+    // there are none.
+    for (const name of [
+      "unlock_note",
+      "unlock_folder",
+      "purge_note",
+      "empty_trash",
+      "delete_note_permanently",
+    ]) {
       await expect(agent.callTool({ name, arguments: {} })).rejects.toMatchObject({
         code: -32602,
       });

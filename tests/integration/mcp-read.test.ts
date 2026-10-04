@@ -28,10 +28,14 @@ const TOOLS = [
   "delete_folder",
   "delete_note",
   "get_overview",
+  "hide_folder",
+  "hide_note",
   "list_changes",
   "list_folder",
   "list_revisions",
   "list_trash",
+  "lock_folder",
+  "lock_note",
   "move_folder",
   "move_note",
   "read_note",
@@ -72,14 +76,19 @@ describe("connecting", () => {
     const guide = await client.readResource({ uri: "hexmark://guide" });
     const text = (guide.contents[0] as { text: string }).text;
     expect(text).toContain("Addressing a note");
-    expect(text).toContain("read, search on the whole wiki");
+    expect(text).toContain(
+      "on the whole wiki as far as it can see it, including new content (read, search)",
+    );
     // Search syntax, sizes with subsections, pieces, no-op writes, the trash with this
-    // server's retention, what comes later.
+    // server's retention, locks.
     expect(text).toContain('"quoted phrases"');
     expect(text).toContain("so do its sizes");
     expect(text).toContain("offset: nextOffset");
     expect(text).toContain("its reason is dropped");
-    expect(text).toContain("Locking comes in a later version");
+    expect(text).toContain(
+      "You cannot\n  unlock: only people can, and people may still change locked items",
+    );
+    expect(text).toContain("answers locked with alreadyLocked: true");
     expect(text).toContain("for 28 days, then the server deletes them for good");
     expect(text).toContain("Agents cannot delete anything for good");
     expect(instructions).toContain("for 28 days, then the server deletes them for good");

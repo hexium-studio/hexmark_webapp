@@ -5,10 +5,7 @@ import {
   toCodePointOffsets,
   toCodeUnitOffsets,
 } from "../../../apps/server/src/lib/code-points";
-import {
-  beyondRole,
-  effectivePermissions,
-} from "../../../apps/server/src/services/access/note-permissions";
+import { beyondRole } from "../../../apps/server/src/services/access/note-permissions";
 import { parseNoteAddress } from "../../../apps/server/src/services/notes/addressing";
 import {
   findSection,
@@ -40,22 +37,6 @@ describe("note addresses", () => {
 });
 
 describe("permissions", () => {
-  it("intersects the role with the token's permissions", () => {
-    expect(effectivePermissions("admin", null)).toEqual([
-      "read",
-      "search",
-      "create",
-      "edit",
-      "move",
-      "delete",
-      "lock",
-    ]);
-    expect(effectivePermissions("guest", null)).toEqual(["read", "search"]);
-    expect(effectivePermissions("user", ["edit", "read"])).toEqual(["read", "edit"]);
-    expect(effectivePermissions("guest", ["read", "edit"])).toEqual(["read"]);
-    expect(effectivePermissions("guest", ["edit"])).toEqual([]);
-  });
-
   it("names the permissions a role cannot grant", () => {
     expect(beyondRole("guest", ["read", "edit", "move"])).toEqual(["edit", "move"]);
     expect(beyondRole("user", ["lock"])).toEqual([]);

@@ -2,16 +2,33 @@ import { expect, type Page } from "@playwright/test";
 import type { Stack } from "../fixtures";
 import { ADA, ageSession, sessionCookie } from "./auth";
 import { text, type UiLocale } from "./messages";
-import { createButton, createFolder, nameField, signInToTokens, submitToken } from "./tokens";
+import {
+  createButton,
+  createFolder,
+  modeRadio,
+  nameField,
+  openFolder,
+  signInToTokens,
+  submitToken,
+  treeBox,
+} from "./tokens";
 import { toasts } from "./wizard";
 
 // Walks through every state of the token page worth checking on its own
 // (accessibility, layout) and calls `visit` in each: the list with a token
-// and folders, the form with its errors, the password dialog, the one-time
-// configuration and the revoke dialog. Long, unbroken names and paths test
+// and folders, the form with its errors, the form with a mode chosen and the
+// tree opened, the password dialog, the one-time configuration, the form
+// changing a token and the revoke dialog. Long, unbroken names and paths test
 // wrapping. Uses locators, so it is not suitable for layer measurements.
 
-export type TokenState = "page" | "form-errors" | "confirm-dialog" | "created" | "revoke-dialog";
+export type TokenState =
+  | "page"
+  | "form-errors"
+  | "tree-open"
+  | "confirm-dialog"
+  | "created"
+  | "edit-form"
+  | "revoke-dialog";
 
 export const LONG_NAME = "agent-with-a-very-long-name-that-has-no-spaces-anywhere-in-it-x";
 export const LONG_FOLDER = "Folder-with-a-long-name-and-no-spaces-to-break-the-line-anywhere";
@@ -34,8 +51,11 @@ export async function seedTokenPage(page: Page, stack: Stack): Promise<void> {
     headers: { authorization: `Session ${session}`, "content-type": "application/json" },
     body: JSON.stringify({
       name: LONG_NAME,
-      permissions: ["read", "search", "edit"],
-      folderScope: [parent, child],
+      mode: "allow_list",
+      entries: [
+        { kind: "folder", id: parent, permissions: ["read", "search"] },
+        { kind: "folder", id: child, permissions: ["read", "search", "edit"] },
+      ],
       expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
     }),
   });
@@ -57,15 +77,15 @@ export async function eachTokenState(
   await expect(page.getByRole("listitem").filter({ hasText: LONG_NAME })).toBeVisible();
   await visit("page");
 
-  await page
-    .getByRole("combobox", { name: t("tokens.form.scope.label") })
-    .selectOption({ label: t("tokens.form.scope.folders") });
   await createButton(page, locale).click();
-  await expect(page.getByText(t("tokens.form.scope.foldersMissing"))).toBeVisible();
+  await expect(page.getByText(t("tokens.form.access.modeMissing"))).toBeVisible();
   await visit("form-errors");
 
   await nameField(page, locale).fill("layout-check");
-  await page.getByRole("checkbox", { name: `${LONG_FOLDER}/Web` }).check();
+  await modeRadio(page, locale, "allow_list").check();
+  await openFolder(page, locale, LONG_FOLDER);
+  await treeBox(page, locale, "folder", "Web").check();
+  await visit("tree-open");
   await createButton(page, locale).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await visit("confirm-dialog");
@@ -81,11 +101,15 @@ export async function eachTokenState(
   await toasts(page).first().getByRole("button").last().click();
   await page.getByRole("button", { name: t("tokens.created.done") }).click();
 
-  await page
-    .getByRole("listitem")
-    .filter({ hasText: LONG_NAME })
-    .getByRole("button", { name: new RegExp(`^${t("tokens.list.revoke")}`) })
-    .click();
+  const item = page.getByRole("listitem").filter({ hasText: LONG_NAME });
+  await item.getByRole("button", { name: new RegExp(`^${t("tokens.list.edit")}`) }).click();
+  await expect(
+    page.getByRole("heading", { name: t("tokens.form.editTitle", { name: LONG_NAME }) }),
+  ).toBeVisible();
+  await visit("edit-form");
+  await page.getByRole("button", { name: t("tokens.form.cancel"), exact: true }).click();
+
+  await item.getByRole("button", { name: new RegExp(`^${t("tokens.list.revoke")}`) }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await visit("revoke-dialog");
   await page.keyboard.press("Escape");

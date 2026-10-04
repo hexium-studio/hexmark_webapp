@@ -78,8 +78,10 @@ describe("api_tokens: columns", () => {
     }
     await expect(
       db.sql`
-        insert into api_tokens (user_id, name, token_hash, token_prefix, permissions)
-        values (${userId}, 'nested', ${"b".repeat(64)}, 'hmk_abcd', '{{read},{edit}}'::text[])
+        insert into api_tokens (user_id, name, token_hash, token_prefix, permissions, access_mode,
+          base_permissions)
+        values (${userId}, 'nested', ${"b".repeat(64)}, 'hmk_abcd', '{{read},{edit}}'::text[],
+          'deny_list', '{read}')
       `,
     ).rejects.toMatchObject({ constraint_name: check });
   });

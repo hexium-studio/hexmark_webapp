@@ -39,17 +39,22 @@ export async function createDatabase(server: PgServer, prefix: string): Promise<
 }
 
 // Back to "setup not done": no users, no sessions, no second factors or
-// challenges, no notes, folders, API tokens or audit events and no instance
-// settings (the row is removed, so its defaults apply again when setup
-// writes it). Tables
-// that do not exist yet (migrations not run) are fine. Every table referencing
+// challenges, no notes, folders, API tokens (with their entries) or audit
+// events and no instance settings (the row is removed, so its defaults apply
+// again when setup writes it). Tables that do not exist yet (migrations not
+// run) are fine. Every table referencing
 // users (directly or through another listed table) must be listed, or the
 // truncate is refused.
 export async function resetSetupData(db: TestDatabase): Promise<void> {
   await db.sql.unsafe(`
     do $$ begin
-      if to_regclass('public.audit_events') is not null then
+      if to_regclass('public.api_token_entries') is not null then
         -- audit_events refuses TRUNCATE without this transaction-local setting.
+        perform set_config('hexmark.audit_purge', 'on', true);
+        truncate table api_token_entries, audit_events, note_sections, note_revisions, notes,
+          folders, api_tokens, auth_challenges, recovery_codes, webauthn_credentials,
+          totp_credentials, sessions, users, instance_settings;
+      elsif to_regclass('public.audit_events') is not null then
         perform set_config('hexmark.audit_purge', 'on', true);
         truncate table audit_events, note_sections, note_revisions, notes, folders, api_tokens,
           auth_challenges, recovery_codes, webauthn_credentials, totp_credentials,

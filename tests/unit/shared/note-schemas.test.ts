@@ -1,5 +1,4 @@
 import {
-  createApiTokenInputSchema,
   createNoteInputSchema,
   fieldErrorsFromZod,
   folderNameSchema,
@@ -107,29 +106,6 @@ describe("note inputs", () => {
 });
 
 describe("token inputs", () => {
-  it("sort and deduplicate permissions and scope", () => {
-    const id = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
-    expect(
-      createApiTokenInputSchema.parse({
-        name: " agent ",
-        permissions: ["edit", "read", "edit"],
-        folderScope: [id, id],
-      }),
-    ).toEqual({ name: "agent", permissions: ["read", "edit"], folderScope: [id], expiresAt: null });
-  });
-
-  it("refuse unknown permissions, an empty scope and malformed expiry", () => {
-    expect(codes(createApiTokenInputSchema, { name: "a", permissions: ["root"] })).toMatchObject({
-      permissions: { code: "invalid_option" },
-    });
-    expect(
-      codes(createApiTokenInputSchema, { name: "a", permissions: ["read"], folderScope: [] }),
-    ).toMatchObject({ folderScope: { code: "required" } });
-    expect(
-      codes(createApiTokenInputSchema, { name: "a", permissions: ["read"], expiresAt: "soon" }),
-    ).toMatchObject({ expiresAt: { code: "invalid_format" } });
-  });
-
   it("build the mcpServers block", () => {
     expect(mcpServersConfig("https://wiki.example.com/mcp", "hmk_x")).toEqual({
       mcpServers: {

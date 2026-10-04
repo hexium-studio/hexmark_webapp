@@ -137,7 +137,7 @@ describe("re-entering the password", () => {
 });
 
 describe("API tokens", () => {
-  it("logs creating and revoking with permissions and prefix, never the token", async () => {
+  it("logs creating and revoking with mode, permissions and prefix, never the token", async () => {
     ({ auth: ada } = await signedIn(world, "cid"));
     const { result, event } = await oneEvent(world.db, () =>
       apiToken(world, ada, { name: "laptop", permissions: ["read", "search"] }),
@@ -153,8 +153,9 @@ describe("API tokens", () => {
       target_label: "laptop",
       details: {
         tokenPrefix: created.token.slice(0, 8),
-        permissions: ["read", "search"],
-        folderScope: null,
+        mode: "deny_list",
+        basePermissions: ["read", "search"],
+        entries: [],
         expiresAt: null,
       },
     });
